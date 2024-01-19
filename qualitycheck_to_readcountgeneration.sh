@@ -35,8 +35,8 @@ threads="8" #higher the number faster the speed; but make sure you have enough C
 for R1 in 24_Samples/*_R1_001.fastq.gz ; do
   R2="${R1%_R1_001.fastq.gz}_R2_002.fastq.gz"
   sample=$(echo $R1|sed 's/_R1_001.fastq.gz//'|sed 's/24_Samples\///'); 
-  echo TrimmomaticPE -threads $threads "$R1" "$R2" 2. trimmomatic/"${sample}_R1_paired.fastq.gz" 2. trimmomatic/"${sample}_R1_unpaired.fastq.gz" 2. \
-  trimmomatic/"${sample}_R2_paired.fastq.gz" 2. trimmomatic/"${sample}_R2_unpaired.fastq.gz" ILLUMINACLIP:TruSeq3-PE.fa:2:30:10:2:True LEADING:3 TRAILING:3 MINLEN:36 
+  TrimmomaticPE -threads $threads "$R1" "$R2" 2.trimmomatic/"${sample}_R1_paired.fastq.gz" 2.trimmomatic/"${sample}_R1_unpaired.fastq.gz"  \
+  2.trimmomatic/"${sample}_R2_paired.fastq.gz" 2.trimmomatic/"${sample}_R2_unpaired.fastq.gz" ILLUMINACLIP:TruSeq3-PE.fa:2:30:10:2:True LEADING:3 TRAILING:3 MINLEN:36 
 done
 
 # Step 3: Alignment to the reference genome using HISAT2
