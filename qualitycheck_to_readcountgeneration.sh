@@ -7,11 +7,11 @@
 # featureCounts v2.0.1
 # StringTie 2.2.1
 
-# Path to the working directory where fastq files are present
+# Path to the working directory where fastq files are present. In this example, the samples are present in a sub-directory of sheep named 24_samples. Hence, the current working directory is set.
 cwd = "/home/afbi-roses@nigov.net/Sheep/"
 cd $cwd
 
-# Create directories to store outputs
+# Create directories to store outputs and give full permission to those folders for the output files to be saved.
 mkdir 1.fatsqc
 mkdir 2.trimmomatic
 mkdir 3.hisat2
@@ -84,3 +84,6 @@ featureCounts -T 8 -t 'gene' -g 'gene_id' -f -a $gtffile -o 4.featurecounts/Lamb
 ## we can use the cut command to select only those columns that you are interested in. Columns 1 and sample wise counts columns
 
 cut -f1,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 4.featurecounts/LambAllSamples.featureCounts > 4.featurecounts/LambAllSamples.featureCounts.Rmatrix
+
+# Step 6 Multiqc Report generation
+multiqc -o multiqc .
