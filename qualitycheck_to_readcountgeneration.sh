@@ -17,17 +17,15 @@ mkdir 2.trimmomatic
 mkdir 3.hisat2
 mkdir 3.star
 mkdir 4.featurecounts
-mkdir 4.stringtie
 mkdir logs
 
 # Step 1: Quality Control
 # Run FASTQC (8 minutes per sample, 4 minutes per read)
-mkdir 1.Fastqc.out
-for R1 in 24.samples/*.fastq; 
-do 
-name=$(echo $R1|sed 's/.fastq//'|sed 's/24.samples\///'); 
-echo "fastqc -o 1.Fastqc.out $R1 &> logs/$name.fastqclog.txt";
-done > 1.fastqc.commands
+for file in *R1_001.fastq.gz; do
+    prefix="${file%R1_001.fastq,gz}"
+    reverse="${file%R1_001.fastq.gz}R2_001.fastq.gz"
+    fastqc -1 $file -2 $reverse -t 15 -o 1.fastqc
+done
 
 # Step 2: Adapter trimming
 # Run Trimmomatic
