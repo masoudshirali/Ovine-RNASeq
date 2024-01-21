@@ -58,11 +58,11 @@ hisat2-build  $refgenome $refgenome
 for R1 in 2.trimmomatic/*_R1_paired.fastq.gz; do
 R2=$(echo $R1| sed 's/_R1_/_R2_/'); 
 sample=$(echo $R1|sed 's/_R1_paired.fastq.gz//'|sed 's/2.trimmomatic\///'); 
-echo hisat2 -q --time --novel-splicesite-outfile 4.hisat2/$sample.tsv --summary-file 4.hisat2/$sample.txt \
---met-file 4.hisat2/$sample.txt --threads $threads -x $refgenome \
+hisat2 -q --time --novel-splicesite-outfile 4.hisat2/$sample.tsv --summary-file 4.hisat2/$sample.summary.txt \
+--met-file 4.hisat2/$sample.met.txt --threads $threads -x Reference_geneome/ARS-UI_Ramb_v3.0/GCF_016772045.2_ARS-UI_Ramb_v3.0_genomic.fna \
 -1 $R1 -2 $R2 | tee >(samtools flagstat - > 4.hisat2/$sample.flagstat) \
 | samtools sort -O BAM | tee 4.hisat2/$sample.bam \
-| samtools index - 4.hisat2/$sample.bam.bai &> logs/$sample.hisat2.txt;
+| samtools index - 4.hisat2/$sample.bam.bai &> 4.hisat2/$sample.hisat2Log.txt;
 done
 
 # Step 5: Alignment using STAR
