@@ -34,10 +34,10 @@ done
 
 threads="8" #higher the number faster the speed; but make sure you have enough CPU support
 for R1 in 24_Samples/*_R1_001.fastq.gz ; do
-  R2="${R1%_R1_001.fastq.gz}_R2_001.fastq.gz"
-  sample=$(echo $R1|sed 's/_R1_001.fastq.gz//'|sed 's/24_Samples\///'); 
-  TrimmomaticPE -threads $threads "$R1" "$R2" 2.trimmomatic/"${sample}_R1_paired.fastq.gz" 2.trimmomatic/"${sample}_R1_unpaired.fastq.gz"  \
-  2.trimmomatic/"${sample}_R2_paired.fastq.gz" 2.trimmomatic/"${sample}_R2_unpaired.fastq.gz" ILLUMINACLIP:TruSeq3-PE.fa:2:30:10:2:True LEADING:3 TRAILING:3 MINLEN:36 
+    R2="${R1%_R1_001.fastq.gz}_R2_001.fastq.gz"
+    sample=$(echo $R1|sed 's/_R1_001.fastq.gz//'|sed 's/24_Samples\///'); 
+    TrimmomaticPE -threads $threads "$R1" "$R2" 2.trimmomatic/"${sample}_R1_paired.fastq.gz" 2.trimmomatic/"${sample}_R1_unpaired.fastq.gz"  \
+    2.trimmomatic/"${sample}_R2_paired.fastq.gz" 2.trimmomatic/"${sample}_R2_unpaired.fastq.gz" ILLUMINACLIP:TruSeq3-PE.fa:2:30:10:2:True LEADING:3 TRAILING:3 MINLEN:36 
 done
 
 # Step3: Fastqc on adapter trimmed reads
@@ -57,13 +57,13 @@ hisat2-build  $refgenome $refgenome
 # 4.2 Now Align to the reference genome
 
 for R1 in 2.trimmomatic/*_R1_paired.fastq.gz; do
-R2=$(echo $R1| sed 's/_R1_/_R2_/'); 
-sample=$(echo $R1|sed 's/_R1_paired.fastq.gz//'|sed 's/2.trimmomatic\///'); 
-hisat2 -q --time --novel-splicesite-outfile 4.hisat2/$sample.tsv --summary-file 4.hisat2/$sample.summary.txt \
---met-file 4.hisat2/$sample.met.txt --threads $threads -x Reference_geneome/ARS-UI_Ramb_v3.0/GCF_016772045.2_ARS-UI_Ramb_v3.0_genomic.fna \
--1 $R1 -2 $R2 | tee >(samtools flagstat - > 4.hisat2/$sample.flagstat) \
-| samtools sort -O BAM | tee 4.hisat2/$sample.bam \
-| samtools index - 4.hisat2/$sample.bam.bai &> 4.hisat2/$sample.hisat2Log.txt;
+    R2=$(echo $R1| sed 's/_R1_/_R2_/'); 
+    sample=$(echo $R1|sed 's/_R1_paired.fastq.gz//'|sed 's/2.trimmomatic\///'); 
+    hisat2 -q --time --novel-splicesite-outfile 4.hisat2/$sample.tsv --summary-file 4.hisat2/$sample.summary.txt \
+    --met-file 4.hisat2/$sample.met.txt --threads $threads -x Reference_geneome/ARS-UI_Ramb_v3.0/GCF_016772045.2_ARS-UI_Ramb_v3.0_genomic.fna \
+    -1 $R1 -2 $R2 | tee >(samtools flagstat - > 4.hisat2/$sample.flagstat) \
+    | samtools sort -O BAM | tee 4.hisat2/$sample.bam \
+    | samtools index - 4.hisat2/$sample.bam.bai &> 4.hisat2/$sample.hisat2Log.txt;
 done
 
 # Step 5: Alignment using STAR
@@ -72,6 +72,7 @@ done
 fastafile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/GCF_016772045.2_ARS-UI_Ramb_v3.0_genomic.fna"
 gtffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/genomic.gtf"
 threads=8
+
 STAR --runThreadN $threads --runMode genomeGenerate --genomeDir StarIndex/ --genomeFastaFiles $fastafile --sjdbGTFfile $gtffile --sjdbOverhang 100
 
 # 5.2 After indexing, we go for STAR alignment.The input files of STAR can be single-end or pair-end fastq files. 
@@ -79,17 +80,19 @@ STAR --runThreadN $threads --runMode genomeGenerate --genomeDir StarIndex/ --gen
 
 indexDir='/mnt/sda1/RNA/40-815970407/Sheep/StarIndex/'
 threads=8
-for i in 2.trimmomatic/*_R1_paired.fastq.gz; 
-    do 
-    name=$(basename ${i}); 
-    STAR --runThreadN $threads --genomeDir $indexDir  --readFilesIn $file $reverse \
-    --outFileNamePrefix 4.star/${name%_R1_paired.fastq.gz}  --outSAMtype BAM SortedByCoordinate --readFilesCommand gunzip -c --limitBAMsortRAM 1756793772
+
+for R1 in 2.trimmomatic/*_R1_paired.fastq.gz; do
+    R2=$(echo $R1| sed 's/_R1_/_R2_/'); 
+    sample=$(echo $R1|sed 's/_R1_paired.fastq.gz//'|sed 's/2.trimmomatic\///'); 
+    STAR --runThreadN $threads --genomeDir $indexDir  --readFilesIn $R1 $R2 \
+    --outFileNamePrefix 4.star/$sample  --outSAMtype BAM SortedByCoordinate --readFilesCommand gunzip -c --limitBAMsortRAM 1756793772
 done
 
 # Step 6 Generate read counts matrix using featureCounts
 # When you want to analyze the data for differential gene expression analysis, it would be convenient to have counts for all samples in a single file (gene count matrix).
 
 gtffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/genomic.gtf"
+
 featureCounts -T 8 -t 'gene' -g 'gene_id' -f -a $gtffile -o 5.featurecounts/Lambs.featurecounts.hisat2 4.hisat2/*.bam
 featureCounts -T 8 -t 'gene' -g 'gene_id' -f -a $gtffile -o 5.featurecounts/Lambs.featurecounts.star 4.star/*.bam
 
