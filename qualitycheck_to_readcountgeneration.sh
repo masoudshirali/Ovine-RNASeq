@@ -66,22 +66,25 @@ hisat2 -q --time --novel-splicesite-outfile 4.hisat2/$sample.tsv --summary-file 
 done
 
 # Step 5: Alignment using STAR
-# 5.1 Build genome index files
+# 5.1 Build genome index files. You need to create a directory to store the index files or if you wish you can write it in the cwd
 
 fastafile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/GCF_016772045.2_ARS-UI_Ramb_v3.0_genomic.fna"
 gtffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/genomic.gtf"
 threads=8
 STAR --runThreadN $threads --runMode genomeGenerate --genomeDir StarIndex/ --genomeFastaFiles $fastafile --sjdbGTFfile $gtffile --sjdbOverhang 100
 
-# 5.2 After indexing, we go for STAR alignment.The input files of STAR can be single-end or pair-end fastq files. If the annotation file (.gtf file) is provided, the accuracy of alignment can be increased.
+# 5.2 After indexing, we go for STAR alignment.The input files of STAR can be single-end or pair-end fastq files. 
+# If the annotation file (.gtf file) is provided, the accuracy of alignment can be increased.
 
 indexDir='/mnt/sda1/RNA/40-815970407/Sheep/StarIndex/'
 threads=8
-for prefix in $(ls 2.trimmomatic/*_paired.fastq.gz | rev | cut -c 18- | rev | uniq)
-do
- echo STAR --runThreadN $threads --genomeDir $indexDir  --readFilesIn "${prefix}_R1_paired.fastq.gz" "${prefix}_R2_paired.fastq.gz" \
- --outFileNamePrefix ${prefix}  --outSAMtype BAM SortedByCoordinate --readFilesCommand gunzip -c --limitBAMsortRAM 1756793772
+for i in 2.trimmomatic/*_R1_paired.fastq.gz; 
+    do 
+    name=$(basename ${i}); 
+    STAR --runThreadN $threads --genomeDir $indexDir  --readFilesIn $file $reverse \
+    --outFileNamePrefix 4.star/${name%_R1_paired.fastq.gz}  --outSAMtype BAM SortedByCoordinate --readFilesCommand gunzip -c --limitBAMsortRAM 1756793772
 done
+
 
 # Step 6 Generate read counts matrix using featureCounts
 # When you want to analyze the data for differential gene expression analysis, it would be convenient to have counts for all samples in a single file (gene count matrix).
