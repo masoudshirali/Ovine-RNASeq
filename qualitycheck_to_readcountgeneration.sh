@@ -50,6 +50,7 @@ done
 
 # Step 4: Alignment to the reference genome using HISAT2
 # 4.1: Build reference genome index. The genome should be in unzipped format or else it wont work
+
 refgenome="Reference_geneome/ARS-UI_Ramb_v3.0/GCF_016772045.2_ARS-UI_Ramb_v3.0_genomic.fna"
 hisat2-build  $refgenome $refgenome
 
@@ -85,12 +86,12 @@ for i in 2.trimmomatic/*_R1_paired.fastq.gz;
     --outFileNamePrefix 4.star/${name%_R1_paired.fastq.gz}  --outSAMtype BAM SortedByCoordinate --readFilesCommand gunzip -c --limitBAMsortRAM 1756793772
 done
 
-
 # Step 6 Generate read counts matrix using featureCounts
 # When you want to analyze the data for differential gene expression analysis, it would be convenient to have counts for all samples in a single file (gene count matrix).
 
 gtffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/genomic.gtf"
-featureCounts -T 8 -t 'gene' -g 'gene_id' -f -a $gtffile -o 5.featurecounts/LambAllSamples.featureCounts 4.hisat2/*.bam
+featureCounts -T 8 -t 'gene' -g 'gene_id' -f -a $gtffile -o 5.featurecounts/Lambs.featurecounts.hisat2 4.hisat2/*.bam
+featureCounts -T 8 -t 'gene' -g 'gene_id' -f -a $gtffile -o 5.featurecounts/Lambs.featurecounts.star 4.star/*.bam
 
 ## Since the featureCounts output has additional columns with information about genomic coordinates, gene length etc., 
 ## we can use the cut command to select only those columns that you are interested in. Columns 1 and sample wise counts columns
