@@ -99,7 +99,10 @@ featureCounts -T 8 -t 'gene' -g 'gene_id' -f -a $gtffile -o 5.featurecounts/Lamb
 ## Since the featureCounts output has additional columns with information about genomic coordinates, gene length etc., 
 ## we can use the cut command to select only those columns that you are interested in. Columns 1 and sample wise counts columns
 
-cut -f1,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 5.featurecounts/LambAllSamples.featureCounts > 5.featurecounts/LambAllSamples.featureCounts.Rmatrix
+cut -f1,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 5.featurecounts/Lambs.featurecounts.hisat2 > 5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix
+cut -f1,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 5.featurecounts/Lambs.featurecounts.star > 5.featurecounts/Lambs.featurecounts.star.Rmatrix
+
+# After these step, try to remove extra texts in the column names (eg..bam in the sample names)
 
 # Step 6 Multiqc Report generation
 multiqc -o multiqc .
