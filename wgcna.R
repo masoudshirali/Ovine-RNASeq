@@ -819,7 +819,7 @@ dev.off()
 
 # eigengene adjacency heatmap
 # Plot the heatmap matrix (note: this plot will overwrite the dendrogram plot)
-pdf("6.deseq2/12.eigengene_adjacency_heatmap.pdf")
+pdf("6.deseq2/12.eigengene_adjacency_heatmap.pdf", width=12, height=13)
 par(cex = 1.0, mar = c(1,1,1,1))
 plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(5,5,2,2),
 plotDendrograms = FALSE, xLabelsAngle = 90)
