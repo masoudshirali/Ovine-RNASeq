@@ -15,6 +15,10 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 # 1. Read the gene counts table 
 data=read.csv("5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix",header=T,row.names=1,sep="\t", check.names = FALSE)
 data=data[ , !names(data) %in% c("7085","7073")]
+colnames(data)<-gsub("Control","",colnames(data))
+colnames(data)<-gsub("Low","",colnames(data))
+colnames(data)<-gsub("Medium","",colnames(data))
+colnames(data)<-gsub("High","",colnames(data))
 
 # Read the metadata
 sample_metadata = read.csv(file = "metadata_with_methaneinfoadded_metadata.csv")
@@ -65,6 +69,7 @@ dev.off()
 # fixing rownames and colnames in data and sample_metadat
 rownames(sample_metadata) <- sample_metadata$ID
 sample_metadata$ID <- factor(sample_metadata$ID)
+rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
 head(sample_metadata)
 
 # making the rownames and column names identical
@@ -86,6 +91,7 @@ nrow(dds75) # 16583 genes
 
 # perform variance stabilization
 dds_norm <- vst(dds75)
+write.csv(assay(dds_norm),"6.deseq2/Lambs_allSamples_normalized_Counts",row.names=T)
 
 
 # get normalized counts
@@ -127,6 +133,7 @@ dev.off()
 # convert matrix to numeric
 norm.counts[] <- sapply(norm.counts, as.numeric)
 
+#1.
 soft_power <- 14
 temp_cor <- cor
 cor <- WGCNA::cor
@@ -686,3 +693,137 @@ edgeWidth <- mapVisualProperty('edge width','weight','p')
 
 createVisualStyle(style.name, defaults, list(nodeLabels,nodeFills,arrowShapes,edgeWidth))
 setVisualStyle(style.name)
+
+##################################################### METHOD 2 ####################################################################################
+#2.
+softPower <- 14
+# calling adjacency function
+adjacency <- adjacency(norm.counts, power = softPower)
+
+# TOM
+TOM <- TOMsimilarity(adjacency)#This gives similarity between genes
+TOM.dissimilarity <- 1-TOM # get dissimilarity matrix
+
+# Hierarchical Clustering Analysis
+#The dissimilarity/distance measures are then clustered using linkage hierarchical clustering and a dendrogram (cluster tree) of genes is constructed.
+#creating the dendrogram 
+geneTree <- hclust(as.dist(TOM.dissimilarity), method = "average") 
+pdf("6.deseq2/5.dendrogram_gene_clustering_TOM_dissimilarity.pdf")
+#plotting the dendrogram
+sizeGrWindow(12,9)
+plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilarity", 
+labels = FALSE, hang = 0.04)
+dev.off()
+
+# identify modules
+Modules <- cutreeDynamic(dendro = geneTree, distM = TOM.dissimilarity, deepSplit = 2, pamRespectsDendro = FALSE, minClusterSize = 30)
+table(Modules) #returns a table of the counts of factor levels in an object. In this case how many genes are assigned to each created module.
+
+#You can now plot the module assignment under the gene dendrogram for visualization
+ModuleColors <- labels2colors(Modules) #assigns each module number a color
+table(ModuleColors) #returns the counts for each color (aka the number of genes within each module)
+
+#plots the gene dendrogram with the module colors
+pdf("6.deseq2/6.Gene_dendrogram_with_modulecolors.pdf")
+plotDendroAndColors(geneTree, ModuleColors,"Module",
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05,
+main = "Gene dendrogram and module colors")
+dev.off()
+
+# Module eigengene identification
+MElist <- moduleEigengenes(norm.counts, colors = ModuleColors) 
+MEs <- MElist$eigengenes 
+head(MEs)
+
+#Module merging
+#To further condense the clusters (branches) into more meaningful modules you can cluster modules based on pairwise eigengene correlations and merge the modules that have similar expression profiles.
+ME.dissimilarity = 1-cor(MElist$eigengenes, use="complete") #Calculate eigengene dissimilarity
+METree = hclust(as.dist(ME.dissimilarity), method = "average") #Clustering eigengenes 
+pdf("6.deseq2/7.Cluster_dendrogram.pdf")
+par(mar = c(0,4,2,0)) #seting margin sizes
+par(cex = 0.6);#scaling the graphic
+plot(METree)
+abline(h=.25, col = "red") #a height of .25 corresponds to correlation of .75
+dev.off()
+
+merge <- mergeCloseModules(norm.counts, ModuleColors, cutHeight = .25)
+# The merged module colors, assigning one color to each module
+mergedColors = merge$colors
+# Eigengenes of the new merged modules
+mergedMEs = merge$newMEs
+
+# dendrogram with original and merged modules
+pdf("6.deseq2/8.original_and_merged_modules_dendrogram.pdf")
+plotDendroAndColors(geneTree, cbind(ModuleColors, mergedColors), 
+c("Original Module", "Merged Module"),
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05,
+main = "Gene dendrogram and module colors for original and merged modules")
+dev.off()
+
+# External trait matching
+# pull out continuous traits
+allTraits <- sample_metadata[,c(3:7)]
+# Define numbers of genes and samples
+nGenes = ncol(norm.counts)
+nSamples = nrow(norm.counts)
+module.trait.correlation = cor(mergedMEs, allTraits, use = "p") #p for pearson correlation coefficient 
+module.trait.Pvalue = corPvalueStudent(module.trait.correlation, nSamples) #calculate the p-value associated with the correlation
+
+# create module-trait heatmap
+# Will display correlations and their p-values
+pdf("6.deseq2/9.Module-trait_relationships.pdf")
+textMatrix = paste(signif(module.trait.correlation, 2), "\n(",
+signif(module.trait.Pvalue, 1), ")", sep = "");
+dim(textMatrix) = dim(module.trait.correlation)
+par(mar = c(6, 8.5, 3, 1))
+# Display the correlation values within a heatmap plot
+labeledHeatmap(Matrix = module.trait.correlation,
+xLabels = names(allTraits),
+yLabels = names(mergedMEs),
+ySymbols = names(mergedMEs),
+colorLabels = FALSE,
+colors = blueWhiteRed(50),
+textMatrix = textMatrix,
+setStdMargins = FALSE,
+cex.text = 0.4,
+zlim = c(-1,1),
+main = paste("Module-trait relationships"))
+dev.off()
+#Each row corresponds to a module eigengene, and the columns correspond to a trait. 
+#Each cell contains a p-value and correlation. Those with strong positive correlations are shaded a darker red while those with stronger negative correlations become more blue.
+
+#Target gene identification
+
+#Network Visualization of Eigengenes, to study the relationship among found modules
+# Isolate desired variable
+metpro = as.data.frame(sample_metadata$CH4production);
+names(metpro) = "methaneproduction"
+# Add thevariable to existing module eigengenes
+MET = orderMEs(cbind(MEs, metpro))
+# Plot the relationships among the eigengenes and the trait
+pdf("6.deseq2/10.Network_eigengenes.pdf")
+par(cex = 0.9)
+plotEigengeneNetworks(MET, "", marDendro = c(0,4,1,2), marHeatmap = c(5,4,1,2), cex.lab = 0.8, xLabelsAngle
+= 90)
+dev.off()
+
+# eigengene dendrogram
+pdf("6.deseq2/11.eigengene_dendrogram.pdf")
+# Plot the dendrogram
+par(cex = 1.0)
+plotEigengeneNetworks(MET, "Eigengene dendrogram", marDendro = c(0,4,2,0),
+plotHeatmaps = FALSE)
+dev.off()
+
+# eigengene adjacency heatmap
+# Plot the heatmap matrix (note: this plot will overwrite the dendrogram plot)
+pdf("6.deseq2/12.eigengene_adjacency_heatmap.pdf")
+par(cex = 1.0, mar = c(1,1,1,1))
+plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(5,5,2,2),
+plotDendrograms = FALSE, xLabelsAngle = 90)
+dev.off()
+
+
+
