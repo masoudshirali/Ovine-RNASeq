@@ -708,9 +708,10 @@ TOM.dissimilarity <- 1-TOM # get dissimilarity matrix
 #The dissimilarity/distance measures are then clustered using linkage hierarchical clustering and a dendrogram (cluster tree) of genes is constructed.
 #creating the dendrogram 
 geneTree <- hclust(as.dist(TOM.dissimilarity), method = "average") 
-pdf("6.deseq2/5.dendrogram_gene_clustering_TOM_dissimilarity.pdf")
+
 #plotting the dendrogram
 sizeGrWindow(12,9)
+pdf("6.deseq2/5.dendrogram_gene_clustering_TOM_dissimilarity.pdf")
 plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilarity", 
 labels = FALSE, hang = 0.04)
 dev.off()
@@ -795,6 +796,43 @@ dev.off()
 #Each cell contains a p-value and correlation. Those with strong positive correlations are shaded a darker red while those with stronger negative correlations become more blue.
 
 #Target gene identification
+# Define variable weight containing the weight column of datTrait
+metpro = as.data.frame(sample_metadata$CH4production);
+names(metpro) = "methaneproduction"
+
+modNames = substring(names(mergedMEs), 3) #extract module names
+
+#Calculate the module membership and the associated p-values
+geneModuleMembership = as.data.frame(cor(norm.counts, mergedMEs, use = "p"))
+MMPvalue = as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples))
+names(geneModuleMembership) = paste("MM", modNames, sep="")
+names(MMPvalue) = paste("p.MM", modNames, sep="")
+
+#Calculate the gene significance and associated p-values
+geneTraitSignificance = as.data.frame(cor(norm.counts, metpro, use = "p"))
+GSPvalue = as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificance), nSamples))
+names(geneTraitSignificance) = paste("GS.", names(metpro), sep="")
+names(GSPvalue) = paste("p.GS.", names(metpro), sep="")
+head(GSPvalue)
+resSig = subset(GSPvalue, p.GS.methaneproduction<0.05)#654 genes that have a high significance for methane production
+# Using the module membership measures you can identify genes with high module membership in interesting modules.
+yg<-subset(MMPvalue,p.MMyellowgreen<0.05)#3054
+
+# we have highest significance for methane production in yellowgreen module
+# Plot a scatter plot of gene significance vs. module membership in the yellowgreen module.
+pdf("6.deseq2/genesignificance_vs_modulemembership_yellowgreenmodule.pdf")
+par(mar=c(1,1,1,1))
+module = "yellowgreen"
+column = match(module, modNames)
+moduleGenes = mergedColors==module
+verboseScatterplot(abs(geneModuleMembership[moduleGenes,column]),
+abs(geneTraitSignificance[moduleGenes,1]),
+xlab = paste("Module Membership in", module, "module"),
+ylab = "Gene significance for methane production",
+main = paste("Module membership vs. gene significance\n"),
+cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
+dev.off()
+# This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). Therefore genes in the yellowgreen module could be potential target genes when looking at body weight.
 
 #Network Visualization of Eigengenes, to study the relationship among found modules
 # Isolate desired variable
