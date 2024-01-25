@@ -40,7 +40,7 @@ table(gsg$goodSamples)
 data <- data[gsg$goodGenes == TRUE,]
 
 # detect outlier samples - hierarchical clustering - method 1
-pdf("6.deseq2/1.hclust_samples.pdf")
+pdf("7.wgcna/1.hclust_samples.pdf")
 sampleTree <- hclust(dist(t(data)), method = "average") #Clustering samples based on distance 
 #Setting the graphical parameters
 par(cex = 0.6);
@@ -58,7 +58,7 @@ pca.var <- pca$sdev^2
 pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
 
 pca.dat <- as.data.frame(pca.dat)
-pdf("6.deseq2/2.pca.pdf")
+pdf("7.wgcna/2.pca.pdf")
 ggplot(pca.dat, aes(PC1, PC2)) +
   geom_point() +
   geom_text(label = rownames(pca.dat)) +
@@ -98,7 +98,7 @@ nrow(dds75) # 16583 genes
 
 # perform variance stabilization
 dds_norm <- vst(dds75)
-write.csv(assay(dds_norm),"6.deseq2/Lambs_allSamples_normalized_Counts",row.names=T)
+write.csv(assay(dds_norm),"7.wgcna/Lambs_allSamples_normalized_Counts",row.names=T)
 
 # get normalized counts
 norm.counts <- assay(dds_norm) %>% 
@@ -118,7 +118,7 @@ sft <- pickSoftThreshold(norm.counts,
 sft.data <- sft$fitIndices
 
 # visualization to pick power
-pdf("6.deseq2/3.power_threshold.pdf")
+pdf("7.wgcna/3.power_threshold.pdf")
 a1 <- ggplot(sft.data, aes(Power, SFT.R.sq, label = Power)) +
   geom_point() +
   geom_text(nudge_y = 0.1) +
@@ -153,7 +153,7 @@ geneTree <- hclust(as.dist(TOM.dissimilarity), method = "average")
 
 #plotting the dendrogram
 sizeGrWindow(12,9)
-pdf("6.deseq2/5.dendrogram_gene_clustering_TOM_dissimilarity.pdf")
+pdf("7.wgcna/5.dendrogram_gene_clustering_TOM_dissimilarity.pdf")
 plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilarity", 
 labels = FALSE, hang = 0.04)
 dev.off()
@@ -167,7 +167,7 @@ ModuleColors <- labels2colors(Modules) #assigns each module number a color
 table(ModuleColors) #returns the counts for each color (aka the number of genes within each module)
 
 #plots the gene dendrogram with the module colors
-pdf("6.deseq2/6.Gene_dendrogram_with_modulecolors.pdf")
+pdf("7.wgcna/6.Gene_dendrogram_with_modulecolors.pdf")
 plotDendroAndColors(geneTree, ModuleColors,"Module",
 dendroLabels = FALSE, hang = 0.03,
 addGuide = TRUE, guideHang = 0.05,
@@ -183,7 +183,7 @@ head(MEs)
 #To further condense the clusters (branches) into more meaningful modules you can cluster modules based on pairwise eigengene correlations and merge the modules that have similar expression profiles.
 ME.dissimilarity = 1-cor(MElist$eigengenes, use="complete") #Calculate eigengene dissimilarity
 METree = hclust(as.dist(ME.dissimilarity), method = "average") #Clustering eigengenes 
-pdf("6.deseq2/7.Cluster_dendrogram.pdf")
+pdf("7.wgcna/7.Cluster_dendrogram.pdf")
 par(mar = c(0,4,2,0)) #seting margin sizes
 par(cex = 0.6);#scaling the graphic
 plot(METree)
@@ -197,7 +197,7 @@ mergedColors = merge$colors
 mergedMEs = merge$newMEs
 
 # dendrogram with original and merged modules
-pdf("6.deseq2/8.original_and_merged_modules_dendrogram.pdf")
+pdf("7.wgcna/8.original_and_merged_modules_dendrogram.pdf")
 plotDendroAndColors(geneTree, cbind(ModuleColors, mergedColors), 
 c("Original Module", "Merged Module"),
 dendroLabels = FALSE, hang = 0.03,
@@ -216,7 +216,7 @@ module.trait.Pvalue = corPvalueStudent(module.trait.correlation, nSamples) #calc
 
 # create module-trait heatmap
 # Will display correlations and their p-values
-pdf("6.deseq2/9.Module-trait_relationships.pdf")
+pdf("7.wgcna/9.Module-trait_relationships.pdf")
 textMatrix = paste(signif(module.trait.correlation, 2), "\n(",
 signif(module.trait.Pvalue, 1), ")", sep = "");
 dim(textMatrix) = dim(module.trait.correlation)
@@ -257,14 +257,14 @@ names(geneTraitSignificance) = paste("GS.", names(metpro), sep="")
 names(GSPvalue) = paste("p.GS.", names(metpro), sep="")
 head(GSPvalue)
 GSPvalue.sig.metpro = subset(GSPvalue, p.GS.methaneproduction<0.05)#654 genes that have a high significance for methane production
-write.csv(GSPvalue.sig.metpro,"6.deseq2/Genes_with_high_significance_to_methaneproduction.csv", row.names=FALSE)
+write.csv(GSPvalue.sig.metpro,"7.wgcna/Genes_with_high_significance_to_methaneproduction.csv", row.names=FALSE)
 # Using the module membership measures you can identify genes with high module membership in interesting modules.
 MMPvalue.sig.yellowgreen<-subset(MMPvalue,p.MMyellowgreen<0.05)#3054
 MMPvalue.sig.lightsteelblue<-subset(MMPvalue,p.MMlightsteelblue1<0.05)#2752
 
 # we have highest significance for methane production in yellowgreen module
 # Plot a scatter plot of gene significance vs. module membership in the yellowgreen module.
-pdf("6.deseq2/10.genesignificance_vs_modulemembership_yellowgreenmodule.pdf")
+pdf("7.wgcna/10.genesignificance_vs_modulemembership_yellowgreenmodule.pdf")
 par(mar=c(1,1,1,1))
 module = "yellowgreen"
 column = match(module, modNames)
@@ -279,7 +279,7 @@ dev.off()
 # This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). 
 # Therefore genes in the yellowgreen module could be potential target genes when looking at methane production.
 
-pdf("6.deseq2/10.genesignificance_vs_modulemembership_lightsteelbluemodule.pdf")
+pdf("7.wgcna/10.genesignificance_vs_modulemembership_lightsteelbluemodule.pdf")
 par(mar=c(1,1,1,1))
 module = "lightsteelblue1"
 column = match(module, modNames)
@@ -299,14 +299,14 @@ names(metpro) = "methaneproduction"
 # Add thevariable to existing module eigengenes
 MET = orderMEs(cbind(MEs, metpro))
 # Plot the relationships among the eigengenes and the trait
-pdf("6.deseq2/11.Network_eigengenes.pdf")
+pdf("7.wgcna/11.Network_eigengenes.pdf")
 par(cex = 0.9)
 plotEigengeneNetworks(MET, "", marDendro = c(0,4,1,2), marHeatmap = c(5,4,1,2), cex.lab = 0.8, xLabelsAngle
 = 90)
 dev.off()
 
 # eigengene dendrogram
-pdf("6.deseq2/12.eigengene_dendrogram.pdf")
+pdf("7.wgcna/12.eigengene_dendrogram.pdf")
 # Plot the dendrogram
 par(cex = 1.0)
 plotEigengeneNetworks(MET, "Eigengene dendrogram", marDendro = c(0,4,2,0),
@@ -315,11 +315,77 @@ dev.off()
 
 # eigengene adjacency heatmap
 # Plot the heatmap matrix (note: this plot will overwrite the dendrogram plot)
-pdf("6.deseq2/13.eigengene_adjacency_heatmap.pdf", width=12, height=13)
+pdf("7.wgcna/13.eigengene_adjacency_heatmap.pdf", width=12, height=13)
 par(cex = 1.0, mar = c(1,1,1,1))
 plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(5,5,2,2),
 plotDendrograms = FALSE, xLabelsAngle = 90)
 dev.off()
+
+# Last step is to export and save the network. Then you can import it in a software for network visualization as Cytoscape, for example.
+#Exporting the network to a cytoscape format
+#Recalculating topological overlap, if necessary
+#TOM = TOMsimilarityFromExpr(expression0, power = 10);
+#Select the modules
+modules = c("yellowgreen"); #chose modules that u want to export
+#Select the gene modules
+genes = colnames(norm.counts)
+
+#if you want export specific colors, substitute the second modulecolors by above modules
+inModule = is.finite(match(ModuleColors, modules))
+modGenes = genes[inModule]
+  
+#Select the corresponding topologic overlap 
+modTOM = TOM[inModule, inModule]
+dimnames(modTOM) = list(modGenes, modGenes)
+modTOMSignificantes = which(modTOM>0.4)
+#####warnings()
+
+#Organize the genes by importance inside the module
+genes = colnames(norm.counts)
+#sum(is.na(genes))
+#It must return 0.
+
+
+#Create the dataframe since the beginning
+geneInfo0 = data.frame(ESTs = genes,
+                       moduleColor = ModuleColors,
+                       geneTraitSignificance,
+                       GSPvalue)
+
+#Order the modules by the significance by a character Ex: peso10days
+modOrder = order(-abs(cor(MEs, metpro, use = "p")))
+
+#Add information of the members of the module in the chosen order
+for (mod in 1:ncol(geneModuleMembership))
+{
+  oldNames = names(geneInfo0)
+  geneInfo0 = data.frame(geneInfo0, geneModuleMembership[, modOrder[mod]], 
+                         MMPvalue[, modOrder[mod]]);
+  names(geneInfo0) = c(oldNames, paste("MM.", modNames[modOrder[mod]], sep=""),
+                       paste("p.MM.", modNames[modOrder[mod]], sep=""))
+}
+
+#Order the genes of geneinfo variable first by the color of the module, then by geneTraitSignificance
+geneOrder = order(geneInfo0$moduleColor, -abs(geneInfo0$GS.Peso10d))
+geneInfo = geneInfo0[geneOrder, ]
+
+#write the file with the ordered values
+write.csv(geneInfo, file = "geneInfo.csv")
+
+#Export the network in list files os n edges that cytoscape can read
+modules = c("yellowgreen")
+probes = colnames(norm.counts) 
+inModule = is.finite(match(ModuleColors, modules));
+modProbes = probes[inModule];
+modTOM = TOM[inModule, inModule];
+dimnames(modTOM) = list(modProbes, modProbes)
+cyt = exportNetworkToCytoscape(modTOM,
+                               edgeFile = paste("CytoscapeInput-edges0-", paste(modules, collapse="-"), ".txt", sep=""),
+                               nodeFile = paste("CytoscapeInput-nodes0-", paste(modules, collapse="-"), ".txt", sep=""),
+                               weighted = TRUE,
+                               threshold = 0,
+                               nodeNames = modProbes,
+                               nodeAttr = ModuleColors[inModule]);
 
 
 #=====================================================================================
@@ -327,7 +393,18 @@ dev.off()
 #   Cytoscape
 #
 #=====================================================================================
-
+module = "yellowgreen"
+datexpr_green = norm.counts[ModuleColors == module,moduleColors == module]
+TOM_green = TOMsimilarityFromExpr(datexpr_green, power = 14, networkType = "signed", TOMType="signed");
+probes = names(norm.counts)
+dimnames(TOM_green) = list(probes, probes)
+cyt = exportNetworkToCytoscape(TOM_green,
+                               edgeFile = paste("CytoscapeInput-edges-", paste(module, collapse="-"), ".txt", sep=""),
+                               nodeFile = paste("CytoscapeInput-nodes-", paste(module, collapse="-"), ".txt", sep=""),
+                               weighted = TRUE,
+                               threshold = 0.02,
+                               nodeNames = probes,
+                               altNodeNames = probes);
 
 #if(!"RCy3" %in% installed.packages()){
 #  install.packages("BiocManager")
@@ -341,11 +418,11 @@ cytoscapePing () # make sure cytoscape is open
 cytoscapeVersionInfo ()
 
 ###### for yellow module of the merged data (newMEs) #################################
-edge <- read.delim("output_for_cytoscape/merge_CytoscapeInput-edges-lightgreen.txt")
+edge <- read.delim("CytoscapeInput-edges0-yellowgreen.txt")
 colnames(edge)
 colnames(edge) <- c("source", "target","weight","direction","fromAltName","toAltName")
 
-node <- read.delim("output_for_cytoscape/merge_CytoscapeInput-nodes-lightgreen.txt")
+node <- read.delim("CytoscapeInput-nodes0-yellowgreen.txt")
 colnames(node)  
 colnames(node) <- c("id","altName","node_attributes") 
 
