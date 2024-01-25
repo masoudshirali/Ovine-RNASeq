@@ -137,8 +137,6 @@ dev.off()
 # convert matrix to numeric
 norm.counts[] <- sapply(norm.counts, as.numeric)
 
-##################################################### METHOD 1 ####################################################################################
-#1.
 softPower <- 14
 # calling adjacency function
 adjacency <- adjacency(norm.counts, power = softPower)
@@ -208,7 +206,7 @@ dev.off()
 
 # External trait matching
 # pull out continuous traits
-allTraits <- sample_metadata[,c(3:7)]
+allTraits <- sample_metadata[,c(3:5)]
 # Define numbers of genes and samples
 nGenes = ncol(norm.counts)
 nSamples = nrow(norm.counts)
@@ -257,13 +255,15 @@ GSPvalue = as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificance), nSam
 names(geneTraitSignificance) = paste("GS.", names(metpro), sep="")
 names(GSPvalue) = paste("p.GS.", names(metpro), sep="")
 head(GSPvalue)
-resSig = subset(GSPvalue, p.GS.methaneproduction<0.05)#654 genes that have a high significance for methane production
+GSPvalue.sig.metpro = subset(GSPvalue, p.GS.methaneproduction<0.05)#654 genes that have a high significance for methane production
+write.csv(GSPvalue.sig.metpro,"6.deseq2/Genes_with_high_significance_to_methaneproduction.csv", row.names=FALSE)
 # Using the module membership measures you can identify genes with high module membership in interesting modules.
-yg<-subset(MMPvalue,p.MMyellowgreen<0.05)#3054
+MMPvalue.sig.yellowgreen<-subset(MMPvalue,p.MMyellowgreen<0.05)#3054
+MMPvalue.sig.lightsteelblue<-subset(MMPvalue,p.MMlightsteelblue1<0.05)#2752
 
 # we have highest significance for methane production in yellowgreen module
 # Plot a scatter plot of gene significance vs. module membership in the yellowgreen module.
-pdf("6.deseq2/genesignificance_vs_modulemembership_yellowgreenmodule.pdf")
+pdf("6.deseq2/10.genesignificance_vs_modulemembership_yellowgreenmodule.pdf")
 par(mar=c(1,1,1,1))
 module = "yellowgreen"
 column = match(module, modNames)
@@ -275,7 +275,21 @@ ylab = "Gene significance for methane production",
 main = paste("Module membership vs. gene significance\n"),
 cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
 dev.off()
-# This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). Therefore genes in the yellowgreen module could be potential target genes when looking at body weight.
+# This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). 
+# Therefore genes in the yellowgreen module could be potential target genes when looking at methane production.
+
+pdf("6.deseq2/10.genesignificance_vs_modulemembership_lightsteelbluemodule.pdf")
+par(mar=c(1,1,1,1))
+module = "lightsteelblue1"
+column = match(module, modNames)
+moduleGenes = mergedColors==module
+verboseScatterplot(abs(geneModuleMembership[moduleGenes,column]),
+abs(geneTraitSignificance[moduleGenes,1]),
+xlab = paste("Module Membership in", module, "module"),
+ylab = "Gene significance for methane production",
+main = paste("Module membership vs. gene significance\n"),
+cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
+dev.off()
 
 #Network Visualization of Eigengenes, to study the relationship among found modules
 # Isolate desired variable
@@ -284,14 +298,14 @@ names(metpro) = "methaneproduction"
 # Add thevariable to existing module eigengenes
 MET = orderMEs(cbind(MEs, metpro))
 # Plot the relationships among the eigengenes and the trait
-pdf("6.deseq2/10.Network_eigengenes.pdf")
+pdf("6.deseq2/11.Network_eigengenes.pdf")
 par(cex = 0.9)
 plotEigengeneNetworks(MET, "", marDendro = c(0,4,1,2), marHeatmap = c(5,4,1,2), cex.lab = 0.8, xLabelsAngle
 = 90)
 dev.off()
 
 # eigengene dendrogram
-pdf("6.deseq2/11.eigengene_dendrogram.pdf")
+pdf("6.deseq2/12.eigengene_dendrogram.pdf")
 # Plot the dendrogram
 par(cex = 1.0)
 plotEigengeneNetworks(MET, "Eigengene dendrogram", marDendro = c(0,4,2,0),
@@ -300,7 +314,7 @@ dev.off()
 
 # eigengene adjacency heatmap
 # Plot the heatmap matrix (note: this plot will overwrite the dendrogram plot)
-pdf("6.deseq2/12.eigengene_adjacency_heatmap.pdf", width=12, height=13)
+pdf("6.deseq2/13.eigengene_adjacency_heatmap.pdf", width=12, height=13)
 par(cex = 1.0, mar = c(1,1,1,1))
 plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(5,5,2,2),
 plotDendrograms = FALSE, xLabelsAngle = 90)
