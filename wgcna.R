@@ -6,6 +6,7 @@ library(flashClust)
 library(curl)
 library(DESeq2)
 library(dplyr)
+library(gridExtra)
 
 # The following setting is important, do not omit.
 options(stringsAsFactors = FALSE);
