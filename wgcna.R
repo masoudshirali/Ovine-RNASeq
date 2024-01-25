@@ -7,6 +7,7 @@ library(curl)
 library(DESeq2)
 library(dplyr)
 library(gridExtra)
+library(ggplot2)
 
 # The following setting is important, do not omit.
 options(stringsAsFactors = FALSE);
@@ -324,7 +325,8 @@ dev.off()
 # Last step is to export and save the network. Then you can import it in a software for network visualization as Cytoscape, for example.
 #Exporting the network to a cytoscape format
 #Recalculating topological overlap, if necessary
-#TOM = TOMsimilarityFromExpr(expression0, power = 10);
+
+TOM = TOMsimilarityFromExpr(norm.counts, power = 14);
 #Select the modules
 modules = c("yellowgreen"); #chose modules that u want to export
 #Select the gene modules
@@ -339,39 +341,6 @@ modTOM = TOM[inModule, inModule]
 dimnames(modTOM) = list(modGenes, modGenes)
 modTOMSignificantes = which(modTOM>0.4)
 #####warnings()
-
-#Organize the genes by importance inside the module
-genes = colnames(norm.counts)
-#sum(is.na(genes))
-#It must return 0.
-
-
-#Create the dataframe since the beginning
-geneInfo0 = data.frame(ESTs = genes,
-                       moduleColor = ModuleColors,
-                       geneTraitSignificance,
-                       GSPvalue)
-
-#Order the modules by the significance by a character Ex: peso10days
-modOrder = order(-abs(cor(MEs, metpro, use = "p")))
-
-#Add information of the members of the module in the chosen order
-for (mod in 1:ncol(geneModuleMembership))
-{
-  oldNames = names(geneInfo0)
-  geneInfo0 = data.frame(geneInfo0, geneModuleMembership[, modOrder[mod]], 
-                         MMPvalue[, modOrder[mod]]);
-  names(geneInfo0) = c(oldNames, paste("MM.", modNames[modOrder[mod]], sep=""),
-                       paste("p.MM.", modNames[modOrder[mod]], sep=""))
-}
-
-#Order the genes of geneinfo variable first by the color of the module, then by geneTraitSignificance
-geneOrder = order(geneInfo0$moduleColor, -abs(geneInfo0$GS.Peso10d))
-geneInfo = geneInfo0[geneOrder, ]
-
-#write the file with the ordered values
-write.csv(geneInfo, file = "geneInfo.csv")
-
 #Export the network in list files os n edges that cytoscape can read
 modules = c("yellowgreen")
 probes = colnames(norm.counts) 
@@ -380,8 +349,8 @@ modProbes = probes[inModule];
 modTOM = TOM[inModule, inModule];
 dimnames(modTOM) = list(modProbes, modProbes)
 cyt = exportNetworkToCytoscape(modTOM,
-                               edgeFile = paste("CytoscapeInput-edges0-", paste(modules, collapse="-"), ".txt", sep=""),
-                               nodeFile = paste("CytoscapeInput-nodes0-", paste(modules, collapse="-"), ".txt", sep=""),
+                               edgeFile = paste("7.wgcna/CytoscapeInput-edges0-", paste(modules, collapse="-"), ".txt", sep=""),
+                               nodeFile = paste("7.wgcna/CytoscapeInput-nodes0-", paste(modules, collapse="-"), ".txt", sep=""),
                                weighted = TRUE,
                                threshold = 0,
                                nodeNames = modProbes,
@@ -393,19 +362,6 @@ cyt = exportNetworkToCytoscape(modTOM,
 #   Cytoscape
 #
 #=====================================================================================
-module = "yellowgreen"
-datexpr_green = norm.counts[ModuleColors == module,moduleColors == module]
-TOM_green = TOMsimilarityFromExpr(datexpr_green, power = 14, networkType = "signed", TOMType="signed");
-probes = names(norm.counts)
-dimnames(TOM_green) = list(probes, probes)
-cyt = exportNetworkToCytoscape(TOM_green,
-                               edgeFile = paste("CytoscapeInput-edges-", paste(module, collapse="-"), ".txt", sep=""),
-                               nodeFile = paste("CytoscapeInput-nodes-", paste(module, collapse="-"), ".txt", sep=""),
-                               weighted = TRUE,
-                               threshold = 0.02,
-                               nodeNames = probes,
-                               altNodeNames = probes);
-
 #if(!"RCy3" %in% installed.packages()){
 #  install.packages("BiocManager")
 #  BiocManager::install("RCy3")
@@ -418,15 +374,15 @@ cytoscapePing () # make sure cytoscape is open
 cytoscapeVersionInfo ()
 
 ###### for yellow module of the merged data (newMEs) #################################
-edge <- read.delim("CytoscapeInput-edges0-yellowgreen.txt")
+edge <- read.delim("7.wgcna/CytoscapeInput-edges0-yellowgreen.txt")
 colnames(edge)
 colnames(edge) <- c("source", "target","weight","direction","fromAltName","toAltName")
 
-node <- read.delim("CytoscapeInput-nodes0-yellowgreen.txt")
+node <- read.delim("7.wgcna/CytoscapeInput-nodes0-yellowgreen.txt")
 colnames(node)  
 colnames(node) <- c("id","altName","node_attributes") 
 
-createNetworkFromDataFrames(node,edge[1:50,], title="my first network", collection="DataFrame Example")
+createNetworkFromDataFrames(node,edge[1:50,], title="methane production network", collection="DataFrame Example")
 
 ################ customise the network visualization ##################################
 # use other pre-set visual style
