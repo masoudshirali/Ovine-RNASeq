@@ -265,7 +265,7 @@ dev.off()
 
 #####################################################################################################
 # Intramodular analysis: identifying genes with high geneModuleMembership & geneTraitSignficance
-#Target gene identification
+# Target gene identification
 #####################################################################################################
 
 # Define variable weight containing the weight column of datTrait
@@ -294,8 +294,23 @@ MMPvalue.sig.lightsteelblue<-subset(MMPvalue,p.MMlightsteelblue1<0.05)#2752
 
 # we have highest significance for methane production in yellowgreen module
 # Plot a scatter plot of gene significance vs. module membership in the yellowgreen module.
+pdf("7.wgcna/10.genesignificance_vs_modulemembership_plummodule.pdf")
+par(mfrow = c(1,1));
+module = "plum1"
+column = match(module, modNames)
+moduleGenes = mergedColors==module
+verboseScatterplot(abs(geneModuleMembership[moduleGenes,column]),
+abs(geneTraitSignificance[moduleGenes,1]),
+xlab = paste("Module Membership in", module, "module"),
+ylab = "Gene significance for methane production",
+main = paste("Module membership vs. gene significance\n"),
+cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = "blue")
+dev.off()
+# This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). 
+# Therefore genes in the yellowgreen module could be potential target genes when looking at methane production.
+
 pdf("7.wgcna/10.genesignificance_vs_modulemembership_yellowgreenmodule.pdf")
-par(mar=c(1,1,1,1))
+par(mfrow = c(1,1));
 module = "yellowgreen"
 column = match(module, modNames)
 moduleGenes = mergedColors==module
@@ -304,13 +319,11 @@ abs(geneTraitSignificance[moduleGenes,1]),
 xlab = paste("Module Membership in", module, "module"),
 ylab = "Gene significance for methane production",
 main = paste("Module membership vs. gene significance\n"),
-cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
+cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = "blue")
 dev.off()
-# This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). 
-# Therefore genes in the yellowgreen module could be potential target genes when looking at methane production.
 
 pdf("7.wgcna/10.genesignificance_vs_modulemembership_lightsteelbluemodule.pdf")
-par(mar=c(1,1,1,1))
+par(mfrow = c(1,1));
 module = "lightsteelblue1"
 column = match(module, modNames)
 moduleGenes = mergedColors==module
@@ -319,11 +332,11 @@ abs(geneTraitSignificance[moduleGenes,1]),
 xlab = paste("Module Membership in", module, "module"),
 ylab = "Gene significance for methane production",
 main = paste("Module membership vs. gene significance\n"),
-cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
+cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = "blue")
 dev.off()
 
 #######################################################################################
-#Network Visualization of Eigengenes, to study the relationship among found modules
+# Network Visualization of Eigengenes, to study the relationship among found modules
 #######################################################################################
 
 # Isolate desired variable
@@ -390,6 +403,7 @@ for (i in 1:length(merge$newMEs)){
 #####################################################################################################################################
 #   Cytoscape
 #####################################################################################################################################
+
 #if(!"RCy3" %in% installed.packages()){
 #  install.packages("BiocManager")
 #  BiocManager::install("RCy3")
