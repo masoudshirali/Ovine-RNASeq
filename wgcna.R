@@ -13,7 +13,10 @@ library(ggplot2)
 options(stringsAsFactors = FALSE);
 allowWGCNAThreads()          # allow multi-threading (optional)
 
-# 1. Read the gene counts table 
+##################################################################################################
+# Read the gene counts table and metadata
+##################################################################################################
+
 data=read.csv("5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix",header=T,row.names=1,sep="\t", check.names = FALSE)
 data=data[ , !names(data) %in% c("7085","7073")]
 colnames(data)<-gsub("Control","",colnames(data))
@@ -27,9 +30,11 @@ rownames(sample_metadata) <- sample_metadata$ID
 sample_metadata$ID <- factor(sample_metadata$ID)
 rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
 
-# 2. QC - outlier detection
-# detect outlier genes
+###########################################################################################
+# QC - outlier detection
+###########################################################################################
 
+# detect outlier genes
 gsg <- goodSamplesGenes(t(data))
 summary(gsg)
 gsg$allOK
@@ -71,7 +76,10 @@ dev.off()
 #samples.to.be.excluded <- c('GSM4615000', 'GSM4614993', 'GSM4614995')
 #data.subset <- data[,!(colnames(data) %in% samples.to.be.excluded)]
 
-# 3. Normalization
+###################################################################################
+# Normalization
+###################################################################################
+
 # create a deseq2 dataset
 
 # fixing rownames and colnames in data and sample_metadat
@@ -105,7 +113,10 @@ write.csv(assay(dds_norm),"7.wgcna/Lambs_allSamples_normalized_Counts",row.names
 norm.counts <- assay(dds_norm) %>% 
   t()
 
-# 4. Network Construction 
+########################################################################################
+# Network Construction 
+########################################################################################
+
 # Choose a set of soft-thresholding powers
 power <- c(c(1:10), seq(from = 12, to = 50, by = 2))
 
@@ -159,7 +170,10 @@ plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilari
 labels = FALSE, hang = 0.04)
 dev.off()
 
+##############################################################################
 # identify modules
+##############################################################################
+
 Modules <- cutreeDynamic(dendro = geneTree, distM = TOM.dissimilarity, deepSplit = 2, pamRespectsDendro = FALSE, minClusterSize = 30)
 table(Modules) #returns a table of the counts of factor levels in an object. In this case how many genes are assigned to each created module.
 
@@ -180,7 +194,10 @@ MElist <- moduleEigengenes(norm.counts, colors = ModuleColors)
 MEs <- MElist$eigengenes 
 head(MEs)
 
+##############################################################################
 #Module merging
+##############################################################################
+
 #To further condense the clusters (branches) into more meaningful modules you can cluster modules based on pairwise eigengene correlations and merge the modules that have similar expression profiles.
 ME.dissimilarity = 1-cor(MElist$eigengenes, use="complete") #Calculate eigengene dissimilarity
 METree = hclust(as.dist(ME.dissimilarity), method = "average") #Clustering eigengenes 
@@ -206,7 +223,13 @@ addGuide = TRUE, guideHang = 0.05,
 main = "Gene dendrogram and module colors for original and merged modules")
 dev.off()
 
+#write.table(merge$oldMEs,file="7.wgcna/oldMEs.txt");
+#write.table(merge$newMEs,file="7.wgcna/newMEs.txt");
+
+####################################################################################
 # External trait matching
+####################################################################################
+
 # pull out continuous traits
 allTraits <- sample_metadata[,c(3:5)]
 # Define numbers of genes and samples
@@ -214,6 +237,8 @@ nGenes = ncol(norm.counts)
 nSamples = nrow(norm.counts)
 module.trait.correlation = cor(mergedMEs, allTraits, use = "p") #p for pearson correlation coefficient 
 module.trait.Pvalue = corPvalueStudent(module.trait.correlation, nSamples) #calculate the p-value associated with the correlation
+write.table(module.trait.correlation,file="7.wgcna/moduleTrait_correlation.txt");
+write.table(module.trait.Pvalue,file="7.wgcna/moduleTrait_pValue.txt");
 
 # create module-trait heatmap
 # Will display correlations and their p-values
@@ -238,7 +263,11 @@ dev.off()
 #Each row corresponds to a module eigengene, and the columns correspond to a trait. 
 #Each cell contains a p-value and correlation. Those with strong positive correlations are shaded a darker red while those with stronger negative correlations become more blue.
 
+#####################################################################################################
+# Intramodular analysis: identifying genes with high geneModuleMembership & geneTraitSignficance
 #Target gene identification
+#####################################################################################################
+
 # Define variable weight containing the weight column of datTrait
 metpro = as.data.frame(sample_metadata$CH4production);
 names(metpro) = "methaneproduction"
@@ -258,7 +287,7 @@ names(geneTraitSignificance) = paste("GS.", names(metpro), sep="")
 names(GSPvalue) = paste("p.GS.", names(metpro), sep="")
 head(GSPvalue)
 GSPvalue.sig.metpro = subset(GSPvalue, p.GS.methaneproduction<0.05)#654 genes that have a high significance for methane production
-write.csv(GSPvalue.sig.metpro,"7.wgcna/Genes_with_high_significance_to_methaneproduction.csv", row.names=FALSE)
+write.csv(GSPvalue.sig.metpro,"7.wgcna/Genes_with_high_significance_to_methaneproduction.csv", row.names=TRUE)
 # Using the module membership measures you can identify genes with high module membership in interesting modules.
 MMPvalue.sig.yellowgreen<-subset(MMPvalue,p.MMyellowgreen<0.05)#3054
 MMPvalue.sig.lightsteelblue<-subset(MMPvalue,p.MMlightsteelblue1<0.05)#2752
@@ -293,7 +322,10 @@ main = paste("Module membership vs. gene significance\n"),
 cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
 dev.off()
 
+#######################################################################################
 #Network Visualization of Eigengenes, to study the relationship among found modules
+#######################################################################################
+
 # Isolate desired variable
 metpro = as.data.frame(sample_metadata$CH4production);
 names(metpro) = "methaneproduction"
@@ -322,46 +354,42 @@ plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(5,5,2,2
 plotDendrograms = FALSE, xLabelsAngle = 90)
 dev.off()
 
+#########################################################################################################################################
 # Last step is to export and save the network. Then you can import it in a software for network visualization as Cytoscape, for example.
-#Exporting the network to a cytoscape format
-#Recalculating topological overlap, if necessary
+#########################################################################################################################################
 
-TOM = TOMsimilarityFromExpr(norm.counts, power = 14);
-#Select the modules
-modules = c("yellowgreen"); #chose modules that u want to export
-#Select the gene modules
-genes = colnames(norm.counts)
+# Exporting the network to a cytoscape format
+# Export the gene list of old modules 
+for (i in 1:length(merge$oldMEs)){
+  modules = c(substring(names(merge$oldMEs)[i], 3));
+  genes = colnames(norm.counts)
+  inModule = is.finite(match(ModuleColors,modules))
+  modGenes = genes[inModule]
+  modTOM=TOM[inModule,inModule]
+  dimnames(modTOM)=list(modGenes,modGenes)
+  cyt = exportNetworkToCytoscape(modTOM,
+                                 edgeFile = paste("7.wgcna/orign_CytoscapeInput-edges-", paste(modules, collapse="-"), ".txt", sep=""),
+                                 nodeFile = paste("7.wgcna/orign_CytoscapeInput-nodes-", paste(modules, collapse="-"), ".txt", sep=""),
+                                 weighted = TRUE, threshold = -1, nodeNames = modGenes, nodeAttr = ModuleColors[inModule]);
+}
 
-#if you want export specific colors, substitute the second modulecolors by above modules
-inModule = is.finite(match(ModuleColors, modules))
-modGenes = genes[inModule]
-  
-#Select the corresponding topologic overlap 
-modTOM = TOM[inModule, inModule]
-dimnames(modTOM) = list(modGenes, modGenes)
-modTOMSignificantes = which(modTOM>0.4)
-#####warnings()
-#Export the network in list files os n edges that cytoscape can read
-modules = c("yellowgreen")
-probes = colnames(norm.counts) 
-inModule = is.finite(match(ModuleColors, modules));
-modProbes = probes[inModule];
-modTOM = TOM[inModule, inModule];
-dimnames(modTOM) = list(modProbes, modProbes)
-cyt = exportNetworkToCytoscape(modTOM,
-                               edgeFile = paste("7.wgcna/CytoscapeInput-edges0-", paste(modules, collapse="-"), ".txt", sep=""),
-                               nodeFile = paste("7.wgcna/CytoscapeInput-nodes0-", paste(modules, collapse="-"), ".txt", sep=""),
-                               weighted = TRUE,
-                               threshold = 0,
-                               nodeNames = modProbes,
-                               nodeAttr = ModuleColors[inModule]);
+# Export the gene list of new modules 
+for (i in 1:length(merge$newMEs)){
+  modules = c(substring(names(merge$newMEs)[i], 3));
+  genes = colnames(norm.counts)
+  inModule = is.finite(match(ModuleColors,modules))
+  modGenes = genes[inModule]
+  modTOM=TOM[inModule,inModule]
+  dimnames(modTOM)=list(modGenes,modGenes)
+  cyt = exportNetworkToCytoscape(modTOM,
+                                 edgeFile = paste("7.wgcna/merge_CytoscapeInput-edges-", paste(modules, collapse="-"), ".txt", sep=""),
+                                 nodeFile = paste("7.wgcna/merge_CytoscapeInput-nodes-", paste(modules, collapse="-"), ".txt", sep=""),
+                                 weighted = TRUE, threshold = -1, nodeNames = modGenes, nodeAttr = ModuleColors[inModule]);
+}
 
-
-#=====================================================================================
-#
+#####################################################################################################################################
 #   Cytoscape
-#
-#=====================================================================================
+#####################################################################################################################################
 #if(!"RCy3" %in% installed.packages()){
 #  install.packages("BiocManager")
 #  BiocManager::install("RCy3")
@@ -373,12 +401,12 @@ library(RCy3)
 cytoscapePing () # make sure cytoscape is open
 cytoscapeVersionInfo ()
 
-###### for yellow module of the merged data (newMEs) #################################
-edge <- read.delim("7.wgcna/CytoscapeInput-edges0-yellowgreen.txt")
+###### for yellowgreen module of the merged data (newMEs) #################################
+edge <- read.delim("7.wgcna/merge_CytoscapeInput-edges-yellowgreen.txt")
 colnames(edge)
 colnames(edge) <- c("source", "target","weight","direction","fromAltName","toAltName")
 
-node <- read.delim("7.wgcna/CytoscapeInput-nodes0-yellowgreen.txt")
+node <- read.delim("7.wgcna/merge_CytoscapeInput-nodes-yellowgreen.txt")
 colnames(node)  
 colnames(node) <- c("id","altName","node_attributes") 
 
@@ -401,5 +429,4 @@ edgeWidth <- mapVisualProperty('edge width','weight','p')
 
 createVisualStyle(style.name, defaults, list(nodeLabels,nodeFills,arrowShapes,edgeWidth))
 setVisualStyle(style.name)
-
 
