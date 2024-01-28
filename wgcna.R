@@ -17,76 +17,76 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 # Read the gene counts table and metadata
 ##################################################################################################
 
-data=read.csv("5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix",header=T,row.names=1,sep="\t", check.names = FALSE)
-data=data[ , !names(data) %in% c("7085","7073")]
-colnames(data)<-gsub("Control","",colnames(data))
-colnames(data)<-gsub("Low","",colnames(data))
-colnames(data)<-gsub("Medium","",colnames(data))
-colnames(data)<-gsub("High","",colnames(data))
-
-# Read the metadata
-sample_metadata = read.csv(file = "metadata_with_methaneinfoadded_metadata.csv")
-rownames(sample_metadata) <- sample_metadata$ID
-sample_metadata$ID <- factor(sample_metadata$ID)
-rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
-
-###########################################################################################
-# QC - outlier detection
-###########################################################################################
-
-# detect outlier genes
-gsg <- goodSamplesGenes(t(data))
-summary(gsg)
-gsg$allOK
-
-table(gsg$goodGenes)
-table(gsg$goodSamples)
-
-# if allOK returen false, remove genes that are detectd as outliers
-data <- data[gsg$goodGenes == TRUE,]
-
-# detect outlier samples - hierarchical clustering - method 1
-pdf("7.wgcna/1.hclust_samples.pdf")
-sampleTree <- hclust(dist(t(data)), method = "average") #Clustering samples based on distance 
-#Setting the graphical parameters
-par(cex = 0.6);
-par(mar = c(0,4,2,0))
-#Plotting the cluster dendrogram
-plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
-cex.axis = 1.5, cex.main = 2)
-dev.off()
-
-# detect outlier samples - pca - method 2
-pca <- prcomp(t(data))
-pca.dat <- pca$x
-
-pca.var <- pca$sdev^2
-pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
-
-pca.dat <- as.data.frame(pca.dat)
-pdf("7.wgcna/2.pca.pdf")
-ggplot(pca.dat, aes(PC1, PC2)) +
-  geom_point() +
-  geom_text(label = rownames(pca.dat)) +
-  labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
-       y = paste0('PC2: ', pca.var.percent[2], ' %'))
-dev.off()
-
-# exclude outlier samples
-#samples.to.be.excluded <- c('GSM4615000', 'GSM4614993', 'GSM4614995')
-#data.subset <- data[,!(colnames(data) %in% samples.to.be.excluded)]
-
-###################################################################################
-# Normalization
-###################################################################################
-
-# create a deseq2 dataset
-
-# fixing rownames and colnames in data and sample_metadat
-rownames(sample_metadata) <- sample_metadata$ID
-sample_metadata$ID <- factor(sample_metadata$ID)
-rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
-head(sample_metadata)
+  data=read.csv("5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix",header=T,row.names=1,sep="\t", check.names = FALSE)
+  data=data[ , !names(data) %in% c("7085","7073")]
+  colnames(data)<-gsub("Control","",colnames(data))
+  colnames(data)<-gsub("Low","",colnames(data))
+  colnames(data)<-gsub("Medium","",colnames(data))
+  colnames(data)<-gsub("High","",colnames(data))
+  
+  # Read the metadata
+  sample_metadata = read.csv(file = "metadata_with_methaneinfoadded_metadata.csv")
+  rownames(sample_metadata) <- sample_metadata$ID
+  sample_metadata$ID <- factor(sample_metadata$ID)
+  rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
+  
+  ###########################################################################################
+  # QC - outlier detection
+  ###########################################################################################
+  
+  # detect outlier genes
+  gsg <- goodSamplesGenes(t(data))
+  summary(gsg)
+  gsg$allOK
+  
+  table(gsg$goodGenes)
+  table(gsg$goodSamples)
+  
+  # if allOK returen false, remove genes that are detectd as outliers
+  data <- data[gsg$goodGenes == TRUE,]
+  
+  # detect outlier samples - hierarchical clustering - method 1
+  pdf("7.wgcna/1.hclust_samples.pdf")
+  sampleTree <- hclust(dist(t(data)), method = "average") #Clustering samples based on distance 
+  #Setting the graphical parameters
+  par(cex = 0.6);
+  par(mar = c(0,4,2,0))
+  #Plotting the cluster dendrogram
+  plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
+  cex.axis = 1.5, cex.main = 2)
+  dev.off()
+  
+  # detect outlier samples - pca - method 2
+  pca <- prcomp(t(data))
+  pca.dat <- pca$x
+  
+  pca.var <- pca$sdev^2
+  pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
+  
+  pca.dat <- as.data.frame(pca.dat)
+  pdf("7.wgcna/2.pca.pdf")
+  ggplot(pca.dat, aes(PC1, PC2)) +
+    geom_point() +
+    geom_text(label = rownames(pca.dat)) +
+    labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
+         y = paste0('PC2: ', pca.var.percent[2], ' %'))
+  dev.off()
+  
+  # exclude outlier samples
+  #samples.to.be.excluded <- c('GSM4615000', 'GSM4614993', 'GSM4614995')
+  #data.subset <- data[,!(colnames(data) %in% samples.to.be.excluded)]
+  
+  ###################################################################################
+  # Normalization
+  ###################################################################################
+  
+  # create a deseq2 dataset
+  
+  # fixing rownames and colnames in data and sample_metadat
+  rownames(sample_metadata) <- sample_metadata$ID
+  sample_metadata$ID <- factor(sample_metadata$ID)
+  rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
+  head(sample_metadata)
 
 # making the rownames and column names identical
 # Put the columns of the count data in the same order as rows names of the sample mapping, then make sure it worked
@@ -152,10 +152,10 @@ norm.counts[] <- sapply(norm.counts, as.numeric)
 
 softPower <- 14
 # calling adjacency function
-adjacency <- adjacency(norm.counts, power = softPower)
+adjacency <- adjacency(norm.counts, power = softPower, type="signed")
 
 # TOM
-TOM <- TOMsimilarity(adjacency)#This gives similarity between genes
+TOM <- TOMsimilarity(adjacency, TOMType = "signed")#This gives similarity between genes
 TOM.dissimilarity <- 1-TOM # get dissimilarity matrix
 
 # Hierarchical Clustering Analysis
@@ -165,7 +165,7 @@ geneTree <- hclust(as.dist(TOM.dissimilarity), method = "average")
 
 #plotting the dendrogram
 sizeGrWindow(12,9)
-pdf("7.wgcna/5.dendrogram_gene_clustering_TOM_dissimilarity.pdf")
+pdf("7.wgcna/4.dendrogram_gene_clustering_TOM_dissimilarity.pdf")
 plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilarity", 
 labels = FALSE, hang = 0.04)
 dev.off()
@@ -182,7 +182,7 @@ ModuleColors <- labels2colors(Modules) #assigns each module number a color
 table(ModuleColors) #returns the counts for each color (aka the number of genes within each module)
 
 #plots the gene dendrogram with the module colors
-pdf("7.wgcna/6.Gene_dendrogram_with_modulecolors.pdf")
+pdf("7.wgcna/5.Gene_dendrogram_with_modulecolors.pdf")
 plotDendroAndColors(geneTree, ModuleColors,"Module",
 dendroLabels = FALSE, hang = 0.03,
 addGuide = TRUE, guideHang = 0.05,
@@ -201,7 +201,7 @@ head(MEs)
 #To further condense the clusters (branches) into more meaningful modules you can cluster modules based on pairwise eigengene correlations and merge the modules that have similar expression profiles.
 ME.dissimilarity = 1-cor(MElist$eigengenes, use="complete") #Calculate eigengene dissimilarity
 METree = hclust(as.dist(ME.dissimilarity), method = "average") #Clustering eigengenes 
-pdf("7.wgcna/7.Cluster_dendrogram.pdf")
+pdf("7.wgcna/6.Clustering of module eigengenes.pdf")
 par(mar = c(0,4,2,0)) #seting margin sizes
 par(cex = 0.6);#scaling the graphic
 plot(METree)
@@ -215,7 +215,7 @@ mergedColors = merge$colors
 mergedMEs = merge$newMEs
 
 # dendrogram with original and merged modules
-pdf("7.wgcna/8.original_and_merged_modules_dendrogram.pdf")
+pdf("7.wgcna/7.original_and_merged_modules_dendrogram.pdf")
 plotDendroAndColors(geneTree, cbind(ModuleColors, mergedColors), 
 c("Original Module", "Merged Module"),
 dendroLabels = FALSE, hang = 0.03,
@@ -223,8 +223,19 @@ addGuide = TRUE, guideHang = 0.05,
 main = "Gene dendrogram and module colors for original and merged modules")
 dev.off()
 
-#write.table(merge$oldMEs,file="7.wgcna/oldMEs.txt");
-#write.table(merge$newMEs,file="7.wgcna/newMEs.txt");
+write.table(merge$oldMEs,file="7.wgcna/oldMEs.txt");
+write.table(merge$newMEs,file="7.wgcna/newMEs.txt");
+
+# Plot heatmap for each module (mergedColors)
+library(gplots)
+col = colorpanel(300, 'purple','black','yellow')
+colorsA1 = names(table(mergedColors))
+pdf("7.wgcna/8.Heatmap.pdf",height=9,width=9)
+for (c in 1:length(colorsA1)){
+    mergedColors == colorsA1[c]
+    heatmap.2(t(norm.counts[, mergedColors==colorsA1[c]]), scale = "row", col=col, density.info ="none", trace="none", cexCol=0.7, cexRow=0.7, margin=c(19,11), main = colorsA1[c], Colv = FALSE)
+}; 
+dev.off()
 
 ####################################################################################
 # External trait matching
@@ -289,14 +300,14 @@ head(GSPvalue)
 GSPvalue.sig.metpro = subset(GSPvalue, p.GS.methaneproduction<0.05)#654 genes that have a high significance for methane production
 write.csv(GSPvalue.sig.metpro,"7.wgcna/Genes_with_high_significance_to_methaneproduction.csv", row.names=TRUE)
 # Using the module membership measures you can identify genes with high module membership in interesting modules.
-MMPvalue.sig.yellowgreen<-subset(MMPvalue,p.MMyellowgreen<0.05)#3054
-MMPvalue.sig.lightsteelblue<-subset(MMPvalue,p.MMlightsteelblue1<0.05)#2752
+MMPvalue.sig.darkmagenta<-subset(MMPvalue, p.MMdarkmagenta<0.05)#2851
+
 
 # we have highest significance for methane production in yellowgreen module
 # Plot a scatter plot of gene significance vs. module membership in the yellowgreen module.
-pdf("7.wgcna/10.genesignificance_vs_modulemembership_plummodule.pdf")
+pdf("7.wgcna/10.genesignificance_vs_modulemembership_darkmagenta_module.pdf")
 par(mfrow = c(1,1));
-module = "plum1"
+module = "darkmagenta"
 column = match(module, modNames)
 moduleGenes = mergedColors==module
 verboseScatterplot(abs(geneModuleMembership[moduleGenes,column]),
@@ -308,32 +319,6 @@ cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = "blue")
 dev.off()
 # This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). 
 # Therefore genes in the yellowgreen module could be potential target genes when looking at methane production.
-
-pdf("7.wgcna/10.genesignificance_vs_modulemembership_yellowgreenmodule.pdf")
-par(mfrow = c(1,1));
-module = "yellowgreen"
-column = match(module, modNames)
-moduleGenes = mergedColors==module
-verboseScatterplot(abs(geneModuleMembership[moduleGenes,column]),
-abs(geneTraitSignificance[moduleGenes,1]),
-xlab = paste("Module Membership in", module, "module"),
-ylab = "Gene significance for methane production",
-main = paste("Module membership vs. gene significance\n"),
-cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = "blue")
-dev.off()
-
-pdf("7.wgcna/10.genesignificance_vs_modulemembership_lightsteelbluemodule.pdf")
-par(mfrow = c(1,1));
-module = "lightsteelblue1"
-column = match(module, modNames)
-moduleGenes = mergedColors==module
-verboseScatterplot(abs(geneModuleMembership[moduleGenes,column]),
-abs(geneTraitSignificance[moduleGenes,1]),
-xlab = paste("Module Membership in", module, "module"),
-ylab = "Gene significance for methane production",
-main = paste("Module membership vs. gene significance\n"),
-cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = "blue")
-dev.off()
 
 #######################################################################################
 # Network Visualization of Eigengenes, to study the relationship among found modules
@@ -416,11 +401,11 @@ cytoscapePing () # make sure cytoscape is open
 cytoscapeVersionInfo ()
 
 ###### for yellowgreen module of the merged data (newMEs) #################################
-edge <- read.delim("7.wgcna/merge_CytoscapeInput-edges-yellowgreen.txt")
+edge <- read.delim("7.wgcna/merge_CytoscapeInput-edges-darkmagenta.txt")
 colnames(edge)
 colnames(edge) <- c("source", "target","weight","direction","fromAltName","toAltName")
 
-node <- read.delim("7.wgcna/merge_CytoscapeInput-nodes-yellowgreen.txt")
+node <- read.delim("7.wgcna/merge_CytoscapeInput-nodes-darkmagenta.txt")
 colnames(node)  
 colnames(node) <- c("id","altName","node_attributes") 
 
