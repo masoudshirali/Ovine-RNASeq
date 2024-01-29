@@ -88,13 +88,13 @@ allowWGCNAThreads()          # allow multi-threading (optional)
   rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
   head(sample_metadata)
 
-# making the rownames and column names identical
-# Put the columns of the count data in the same order as rows names of the sample mapping, then make sure it worked
-data <- data[,unique(rownames(sample_metadata))]
-all(colnames(data) == rownames(sample_metadata))
+  # making the rownames and column names identical
+  # Put the columns of the count data in the same order as rows names of the sample mapping, then make sure it worked
+  data <- data[,unique(rownames(sample_metadata))]
+  all(colnames(data) == rownames(sample_metadata))
 
-# create dds
-dds <- DESeqDataSetFromMatrix(countData = data,
+  # create dds
+  dds <- DESeqDataSetFromMatrix(countData = data,
                               colData = sample_metadata,
                               design = ~ 1) # not spcifying model
 
@@ -126,6 +126,7 @@ sft <- pickSoftThreshold(norm.counts,
                   networkType = "signed",
                   verbose = 5)
 
+power=sft$powerEstimate #14
 
 sft.data <- sft$fitIndices
 
@@ -228,7 +229,7 @@ write.table(merge$newMEs,file="7.wgcna/newMEs.txt");
 
 # Plot heatmap for each module (mergedColors)
 library(gplots)
-col = colorpanel(300, 'purple','black','yellow')
+col = colorpanel(300, 'red','grey','green')
 colorsA1 = names(table(mergedColors))
 pdf("7.wgcna/8.Heatmap.pdf",height=9,width=9)
 for (c in 1:length(colorsA1)){
@@ -286,12 +287,14 @@ names(metpro) = "methaneproduction"
 modNames = substring(names(mergedMEs), 3) #extract module names
 
 #Calculate the module membership and the associated p-values
+
 geneModuleMembership = as.data.frame(cor(norm.counts, mergedMEs, use = "p"))
 MMPvalue = as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples))
 names(geneModuleMembership) = paste("MM", modNames, sep="")
 names(MMPvalue) = paste("p.MM", modNames, sep="")
 
 #Calculate the gene significance and associated p-values
+
 geneTraitSignificance = as.data.frame(cor(norm.counts, metpro, use = "p"))
 GSPvalue = as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificance), nSamples))
 names(geneTraitSignificance) = paste("GS.", names(metpro), sep="")
@@ -302,9 +305,8 @@ write.csv(GSPvalue.sig.metpro,"7.wgcna/Genes_with_high_significance_to_methanepr
 # Using the module membership measures you can identify genes with high module membership in interesting modules.
 MMPvalue.sig.darkmagenta<-subset(MMPvalue, p.MMdarkmagenta<0.05)#2851
 
-
-# we have highest significance for methane production in yellowgreen module
-# Plot a scatter plot of gene significance vs. module membership in the yellowgreen module.
+# we have highest significance for methane production in darkmagenta module
+# Plot a scatter plot of gene significance vs. module membership in the darkmagenta module.
 pdf("7.wgcna/10.genesignificance_vs_modulemembership_darkmagenta_module.pdf")
 par(mfrow = c(1,1));
 module = "darkmagenta"
@@ -317,8 +319,57 @@ ylab = "Gene significance for methane production",
 main = paste("Module membership vs. gene significance\n"),
 cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = "blue")
 dev.off()
+
+# calculate the module membership values (aka. module eigengene based
+# connectivity kME):
+datKME = signedKME(norm.counts, mergedMEs)
+pdf("7.wgcna/10.genesignificance_vs_modulemembership_imp_modules.pdf")
+colorOfColumn = substring(names(datKME), 4)
+par(mfrow = c(1, 2))
+selectModules = c("darkmagenta", "skyblue3")
+par(mfrow = c(2, length(selectModules)/2))
+for (module in selectModules) {
+    column = match(module, colorOfColumn)
+    restModule = mergedColors == module
+    verboseScatterplot(datKME[restModule, column], abs(geneTraitSignificance[restModule,1]), xlab = paste("Module Membership ", 
+        module, "module"), ylab = "GS.methaneproduction", main = paste("kME.", module, 
+        "vs. GS"), col = module)
+}
+dev.off()
+
 # This indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). 
-# Therefore genes in the yellowgreen module could be potential target genes when looking at methane production.
+# Therefore genes in the darkmagenta module could be potential target genes when looking at methane production.
+
+#Identifying most important genes for one determined characteristic inside of the cluster
+probes = colnames(norm.counts)
+geneInfo0 = data.frame(Genes = probes,
+                       moduleColor = mergedColors,
+                       geneTraitSignificance,
+                       GSPvalue)
+#Order modules by their significance for trait
+modOrder = order(-abs(cor(mergedMEs, metpro, use = "p")))
+for (mod in 1:ncol(geneModuleMembership))
+{
+  oldNames = names(geneInfo0)
+  geneInfo0 = data.frame(geneInfo0, geneModuleMembership[, modOrder[mod]], 
+                         MMPvalue[, modOrder[mod]]);
+  names(geneInfo0) = c(oldNames, paste("MM.", modNames[modOrder[mod]], sep=""),
+                       paste("p.MM.", modNames[modOrder[mod]], sep=""))
+}
+geneOrder = order(geneInfo0$moduleColor, -abs(geneInfo0$GS.methaneproduction))
+geneInfo = geneInfo0[geneOrder, ]
+write.csv(geneInfo, file = "7.wgcna/geneInfo_methaneproduction.csv")
+
+#modOrder = order(-abs(cor(mergedMEs, metpro, use = "p")));
+##Order the genes in the geneInfo variable first by module color, then by geneTraitSignificance
+#geneOrder = order(geneInfo0$moduleColor, -abs(geneInfo0$GS.methaneproduction));
+#geneInfo = geneInfo0[geneOrder, ]                                            
+##Save
+#write.csv(geneInfo, file = "7.wgcna/geneInfo_methaneproduction.csv")    
+
+#Hub genes
+hub = chooseTopHubInEachModule(norm.counts, mergedColors)
+write.csv(hub, file = "7.wgcna/hub_genes.csv") 
 
 #######################################################################################
 # Network Visualization of Eigengenes, to study the relationship among found modules
