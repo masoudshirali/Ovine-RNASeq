@@ -83,4 +83,4 @@ for(i in 1:length(results)){
 
 # Extract the rawcounts for these significant genes (for WGCNA)
 required_df <- countData[rownames(countData) %in% rownames(resSig),]
-write.csv(as.data.frame(required_df), '6.deseq2/"CH4production.sig.genes.raw.counts.csv',quote=F, row.names=TRUE)
+write.table(as.data.frame(required_df), '6.deseq2/CH4production.sig.genes.raw.counts.csv',quote=F, row.names=TRUE)
