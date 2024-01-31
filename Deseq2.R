@@ -25,10 +25,10 @@ countData<-read.csv("5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix",sep="\t
 countData<-countData[ , !names(countData) %in% c("7085","7073")]# Remove 7085 and 7073 as they had poor mapping rates
 
 # Remove the .bam, control, low, medium and high from the column names
-#colnames(countData)<-gsub("Control","",colnames(countData))
-#colnames(countData)<-gsub("Low","",colnames(countData))
-#colnames(countData)<-gsub("Medium","",colnames(countData))
-#colnames(countData)<-gsub("High","",colnames(countData))
+colnames(countData)<-gsub("Control","",colnames(countData))
+colnames(countData)<-gsub("Low","",colnames(countData))
+colnames(countData)<-gsub("Medium","",colnames(countData))
+colnames(countData)<-gsub("High","",colnames(countData))
 
 orig_names <- names(countData) # keep a back-up copy of the original names
 geneID <- countData$Geneid# Convert count data to a matrix of appropriate form that DEseq2 can read
@@ -81,3 +81,6 @@ for(i in 1:length(results)){
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
 
+# Extract the rawcounts for these significant genes (for WGCNA)
+required_df <- countData[rownames(countData) %in% rownames(resSig),]
+write.csv(as.data.frame(required_df), '6.deseq2/"CH4production.sig.genes.raw.counts.csv',quote=F, row.names=TRUE)
