@@ -8,6 +8,8 @@ library(DESeq2)
 library(dplyr)
 library(gridExtra)
 library(ggplot2)
+library(tidyverse)
+library(CorLevelPlot)
 
 # The following setting is important, do not omit.
 options(stringsAsFactors = FALSE);
@@ -276,6 +278,17 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 #Each row corresponds to a module eigengene, and the columns correspond to a trait. 
 #Each cell contains a p-value and correlation. Those with strong positive correlations are shaded a darker red while those with stronger negative correlations become more blue.
 
+# heatmap with significance
+  heatmap.data <- merge(mergedMEs , allTraits, by = 'row.names')
+  head(heatmap.data)
+  heatmap.data <- heatmap.data %>% 
+  column_to_rownames(var = 'Row.names')
+  pdf("7.wgcna/9.Module-trait_relationships_with_significance.pdf")
+  CorLevelPlot(heatmap.data,
+             x = names(heatmap.data)[17:19],
+             y = names(heatmap.data)[1:16],
+             col = c("blue1", "skyblue", "white", "pink", "red"))
+  dev.off()
 #####################################################################################################
 # Intramodular analysis: identifying genes with high geneModuleMembership & geneTraitSignficance
 # Target gene identification
