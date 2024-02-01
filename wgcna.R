@@ -240,19 +240,6 @@ allowWGCNAThreads()          # allow multi-threading (optional)
   }; 
   dev.off()
 
-# Which modules have biggest differences across methane production or methane yield?
-# Create the design matrix from the `methane yield` variable  
-  des_mat <- model.matrix(~ sample_metadata$CH4yield)
-# Run linear model on each module. Limma wants our tests to be per row, so we also need to transpose so the eigengenes are rows
-  fit <- limma::lmFit(t(mergedMEs), design = des_mat)
-# Apply empirical Bayes to smooth standard errors
-  fit <- limma::eBayes(fit)
-# Apply multiple testing correction and obtain stats  
-stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
-  tibble::rownames_to_column("module")
-
-# It seems darkmagenta module has highest significamce to methane yield. Lets dive into more details of this module.  
-  
 ####################################################################################
 # External trait matching
 ####################################################################################
@@ -291,6 +278,17 @@ stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
 #Each row corresponds to a module eigengene, and the columns correspond to a trait. 
 #Each cell contains a p-value and correlation. Those with strong positive correlations are shaded a darker red while those with stronger negative correlations become more blue.
 
+# Which modules have biggest differences across methane production or methane yield?
+# Create the design matrix from the `methane yield` variable  
+  des_mat <- model.matrix(~sample_metadata$CH4yield)
+# Run linear model on each module. Limma wants our tests to be per row, so we also need to transpose so the eigengenes are rows
+  fit <- limma::lmFit(t(mergedMEs), design = des_mat)
+# Apply empirical Bayes to smooth standard errors
+  fit <- limma::eBayes(fit)
+# Apply multiple testing correction and obtain stats  
+stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
+  tibble::rownames_to_column("module")# It seems darkmagenta module has highest significamce to methane yield. Lets dive into more details of this module.  
+  
 # heatmap with significance
   heatmap.data <- merge(mergedMEs , allTraits, by = 'row.names')
   head(heatmap.data)
@@ -302,6 +300,7 @@ stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
              y = names(heatmap.data)[1:16],
              col = c("blue1", "skyblue", "white", "pink", "red"))
   dev.off()
+
 #####################################################################################################
 # Intramodular analysis: identifying genes with high geneModuleMembership & geneTraitSignficance
 # Target gene identification
@@ -312,18 +311,15 @@ stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
   names(metpro) = "methane_production"
   metyield = as.data.frame(sample_metadata$CH4yield)
   names(metyield) = "methane_yield"
-
   modNames = substring(names(mergedMEs), 3) #extract module names
 
 #Calculate the module membership and the associated p-values
-
   geneModuleMembership = as.data.frame(cor(norm.counts, mergedMEs, use = "p"))
   MMPvalue = as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples))
   names(geneModuleMembership) = paste("MM", modNames, sep="")
   names(MMPvalue) = paste("p.MM", modNames, sep="")
 
 #Calculate the gene significance and associated p-values for methane production
-
   geneTraitSignificance = as.data.frame(cor(norm.counts, metpro, use = "p"))
   GSPvalue = as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificance), nSamples))
   names(geneTraitSignificance) = paste("GS.", names(metpro), sep="")
@@ -342,7 +338,7 @@ stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
   names(geneTraitSignificance_y) = paste("GS.", names(metyield), sep="")
   names(GSPvalue_y) = paste("p.GS.", names(metyield), sep="")
   head(GSPvalue_y)
-  GSPvalue.sig.metyield = subset(GSPvalue_y, p.GS.methane_yield<0.05)#654 genes that have a high significance for methane production
+  GSPvalue.sig.metyield = subset(GSPvalue_y, p.GS.methane_yield<0.05)#450 genes that have a high significance for methane yield
   GSPvalue_y %>%
   as.data.frame() %>%
   arrange(p.GS.methane_yield) %>%
@@ -404,6 +400,7 @@ stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
   connectivity = connectivity[order.kWithin,] #order rows following kWithin
   #connectivity = connectivity[1:5,] #top 5 genes that have a high connectivity to other genes in the darkmagenta module
   connectivity %>% head(10)#top 10 genes that have a high connectivity to other genes in the darkmagenta module
+  write.csv(connectivity,"7.wgcna/hubgenes_ordered_with_high_connectivity.csv")#top genes would be the one with high connectivity
 
 #Identifying most important genes for one determined characteristic inside of the cluster
   probes = colnames(norm.counts)
