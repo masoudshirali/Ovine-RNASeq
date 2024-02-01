@@ -240,6 +240,19 @@ allowWGCNAThreads()          # allow multi-threading (optional)
   }; 
   dev.off()
 
+# Which modules have biggest differences across methane production or methane yield?
+# Create the design matrix from the `methane yield` variable  
+  des_mat <- model.matrix(~ sample_metadata$CH4yield)
+# Run linear model on each module. Limma wants our tests to be per row, so we also need to transpose so the eigengenes are rows
+  fit <- limma::lmFit(t(mergedMEs), design = des_mat)
+# Apply empirical Bayes to smooth standard errors
+  fit <- limma::eBayes(fit)
+# Apply multiple testing correction and obtain stats  
+stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
+  tibble::rownames_to_column("module")
+
+# It seems darkmagenta module has highest significamce to methane yield. Lets dive into more details of this module.  
+  
 ####################################################################################
 # External trait matching
 ####################################################################################
