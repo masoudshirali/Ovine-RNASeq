@@ -100,11 +100,11 @@ allowWGCNAThreads()          # allow multi-threading (optional)
                               colData = sample_metadata,
                               design = ~ 1) # not spcifying model
 
-## remove all genes with counts < 10 in more than 75% of samples (22*0.75=16)
+## remove all genes with counts < 4 in more than 75% of samples (22*0.75=16)
 ## suggested by WGCNA on RNAseq FAQ
 
-  dds75 <- dds[rowSums(counts(dds) >= 10) >= 16,]
-  nrow(dds75) # 16583 genes
+  dds75 <- dds[rowSums(counts(dds) >= 4) >= 16,]
+  nrow(dds75) # 16583 genes, when changed to 4 it became 18204 genes
 
 
 # perform variance stabilization
@@ -153,7 +153,7 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 # convert matrix to numeric
   norm.counts[] <- sapply(norm.counts, as.numeric)
 
-  softPower <- 14
+  softPower <- 18
 # calling adjacency function
   adjacency <- adjacency(norm.counts, power = softPower, type="signed")
 
