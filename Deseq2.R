@@ -21,6 +21,8 @@ system("mkdir 6.deseq2")
 
 # Read the raw count data generated from featureCounts
 countData<-read.csv("5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix",sep="\t", header=T, check.names=F)
+#countData1 = countData %>% select(-contains(c("Low", "Medium")))#remove rows with Low and Medium in column headers (only for test case)
+#countData = countData1
 # run the below step if you want to remove any of the samples with poor mapping rates, as including this might induce noise in the deseq2 results
 countData<-countData[ , !names(countData) %in% c("7085","7073")]# Remove 7085 and 7073 as they had poor mapping rates
 
@@ -44,6 +46,8 @@ colSums(countData[,2:ncol(countData)])
 
 # Read the metadata file
 metaData <-read.csv("metadata_with_methaneinfoadded_metadata.csv",sep=",",header=T)
+#metaData1 = metaData[!grepl('Low|Medium', metaData$ID),]# To remove any rows with Low or medium in the ID column. (Only for test case)
+#metaData = metaData1
 dim(metaData)
 head(metaData)
 rownames(metaData) <- metaData$ID
@@ -73,14 +77,33 @@ for(i in 1:length(results)){
   res = results(deseq2Data, 
                 name = results[i])
   resorder <- res[order(res$padj),]
-  upDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange > 0))))
-  downDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange < 0))))
-  resSig = subset(resorder, padj < 0.1 & log2FoldChange > 0 | padj < 0.1 & log2FoldChange < 0)
-  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1p.lfc0.updownDEGs.csv"), row.names = T)
+  upDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange > 1))))
+  downDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange < -1))))
+  resSig = subset(resorder, padj < 0.1 & log2FoldChange > 1 | padj < 0.1 & log2FoldChange < -1)
+  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1p.lfc1.updownDEGs.Control.vs.High.csv"), row.names = T)
   upresultstable[results[i],"upDEGs"] = upDEGs
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
 
+# repeating the results extraction with different log2fc cutoff
+
+results1 = resultsNames(deseq2Data)
+upresultstable1 = matrix(nrow = length(results1), ncol = 1, dimnames = list(results1,"upDEGs"))
+downresultstable1 = matrix(nrow = length(results1), ncol = 1, dimnames = list(results1,"downDEGs"))
+
+for(i in 1:length(results1)){
+
+  res1 = results(deseq2Data, 
+                name = results1[i])
+  resorder1 <- res1[order(res1$padj),]
+  upDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange > 0))))
+  downDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange < 0))))
+  resSig1 = subset(resorder1, padj < 0.1 & log2FoldChange > 1 | padj < 0.1 & log2FoldChange < 0)
+  write.csv(resSig1 , file=paste0("6.deseq2/",results1[i],".0.1p.lfc0.updownDEGs.Control.vs.High.csv"), row.names = T)
+  upresultstable1[results1[i],"upDEGs"] = upDEGs1
+  downresultstable1[results1[i],"downDEGs"] = downDEGs1 
+}
+
 # Extract the rawcounts for these significant genes (for WGCNA)
-#required_df <- countData[rownames(countData) %in% rownames(resSig),]
-#write.table(as.data.frame(required_df), '6.deseq2/CH4production.sig.genes.raw.counts.csv',quote=F, row.names=TRUE)
+#required_df <- countData[rownames(countData) %in% rownames(resSig1),]
+#write.table(as.data.frame(required_df), '6.deseq2/Control.vs.High.sig.genes.raw.counts.csv',quote=F, row.names=TRUE)
