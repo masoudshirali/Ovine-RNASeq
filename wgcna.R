@@ -28,6 +28,7 @@ allowWGCNAThreads()          # allow multi-threading (optional)
   
   # Read the metadata
   sample_metadata = read.csv(file = "metadata_with_methaneinfoadded_metadata.csv")
+  #sample_metadata$X<-NULL
   rownames(sample_metadata) <- sample_metadata$ID
   sample_metadata$ID <- factor(sample_metadata$ID)
   rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
@@ -83,13 +84,6 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 ###################################################################################
   
 # create a deseq2 dataset
-  
-# fixing rownames and colnames in data and sample_metadat
-  rownames(sample_metadata) <- sample_metadata$ID
-  sample_metadata$ID <- factor(sample_metadata$ID)
-  rownames(sample_metadata)<-gsub("[a-zA-Z ]", "", rownames(sample_metadata))
-  head(sample_metadata)
-
 # making the rownames and column names identical
 # Put the columns of the count data in the same order as rows names of the sample mapping, then make sure it worked
   data <- data[,unique(rownames(sample_metadata))]
@@ -100,11 +94,11 @@ allowWGCNAThreads()          # allow multi-threading (optional)
                               colData = sample_metadata,
                               design = ~ 1) # not spcifying model
 
-## remove all genes with counts < 4 in more than 75% of samples (22*0.75=16)
+## remove all genes with counts < 4 in more than 75% of samples (22*0.95=20)
 ## suggested by WGCNA on RNAseq FAQ
 
-  dds75 <- dds[rowSums(counts(dds) >= 4) >= 16,]
-  nrow(dds75) # 16583 genes, when changed to 4 it became 18204 genes
+  dds75 <- dds[rowSums(counts(dds) >= 4)]
+  nrow(dds75) 
 
 
 # perform variance stabilization
@@ -153,7 +147,7 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 # convert matrix to numeric
   norm.counts[] <- sapply(norm.counts, as.numeric)
 
-  softPower <- 18
+  softPower <- 14
 # calling adjacency function
   adjacency <- adjacency(norm.counts, power = softPower, type="signed")
 
@@ -229,23 +223,12 @@ allowWGCNAThreads()          # allow multi-threading (optional)
   write.table(merge$oldMEs,file="7.wgcna/oldMEs.txt");
   write.table(merge$newMEs,file="7.wgcna/newMEs.txt");
 
-# Plot heatmap for each module (mergedColors)
-  library(gplots)
-  col = colorpanel(300, 'red','grey','green')
-  colorsA1 = names(table(mergedColors))
-  pdf("7.wgcna/8.Heatmap.pdf",height=9,width=9)
-  for (c in 1:length(colorsA1)){
-    mergedColors == colorsA1[c]
-    heatmap.2(t(norm.counts[, mergedColors==colorsA1[c]]), scale = "row", col=col, density.info ="none", trace="none", cexCol=0.7, cexRow=0.7, margin=c(19,11), main = colorsA1[c], Colv = FALSE)
-  }; 
-  dev.off()
-
 ####################################################################################
 # External trait matching
 ####################################################################################
 
-# pull out continuous traits
-  allTraits <- sample_metadata[,c(3:5)]
+# pull out all traits
+  allTraits <- sample_metadata[,c(3:21)]
 # Define numbers of genes and samples
   nGenes = ncol(norm.counts)
   nSamples = nrow(norm.counts)
@@ -271,6 +254,7 @@ allowWGCNAThreads()          # allow multi-threading (optional)
   textMatrix = textMatrix,
   setStdMargins = FALSE,
   cex.text = 0.4,
+  cex.axis = 2.5,
   zlim = c(-1,1),
   main = paste("Module-trait relationships"))
   dev.off()
@@ -294,11 +278,12 @@ stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
   head(heatmap.data)
   heatmap.data <- heatmap.data %>% 
   column_to_rownames(var = 'Row.names')
-  pdf("7.wgcna/9.Module-trait_relationships_with_significance.pdf")
+  pdf("7.wgcna/9.Module-trait_relationships_with_significance.pdf", width=14, height=10)
   CorLevelPlot(heatmap.data,
-             x = names(heatmap.data)[17:19],
+             x = names(heatmap.data)[17:35],
              y = names(heatmap.data)[1:16],
-             col = c("blue1", "skyblue", "white", "pink", "red"))
+             col = c("blue1", "skyblue", "white", "pink", "red"),
+             rotLabX = 30, rotLabY = 30)
   dev.off()
 
 #####################################################################################################
@@ -307,7 +292,7 @@ stats_df <- limma::topTable(fit, number = ncol(mergedMEs)) %>%
 #####################################################################################################
 
 # Define variable weight containing the weight column of datTrait
-  metpro = as.data.frame(sample_metadata$CH4production);
+  metpro = as.data.frame(sample_metadata$CH4yield);
   names(metpro) = "methane_production"
   metyield = as.data.frame(sample_metadata$CH4yield)
   names(metyield) = "methane_yield"
