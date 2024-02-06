@@ -80,7 +80,7 @@ for(i in 1:length(results)){
   upDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange > 1))))
   downDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange < -1))))
   resSig = subset(resorder, padj < 0.1 & log2FoldChange > 1 | padj < 0.1 & log2FoldChange < -1)
-  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1p.lfc1.updownDEGs.Control.vs.High.csv"), row.names = T)
+  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1p.lfc1.updownDEGs.csv"), row.names = T)
   upresultstable[results[i],"upDEGs"] = upDEGs
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
@@ -99,7 +99,7 @@ for(i in 1:length(results1)){
   upDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange > 0))))
   downDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange < 0))))
   resSig1 = subset(resorder1, padj < 0.1 & log2FoldChange > 1 | padj < 0.1 & log2FoldChange < 0)
-  write.csv(resSig1 , file=paste0("6.deseq2/",results1[i],".0.1p.lfc0.updownDEGs.Control.vs.High.csv"), row.names = T)
+  write.csv(resSig1 , file=paste0("6.deseq2/",results1[i],".0.1p.lfc0.updownDEGs.csv"), row.names = T)
   upresultstable1[results1[i],"upDEGs"] = upDEGs1
   downresultstable1[results1[i],"downDEGs"] = downDEGs1 
 }
