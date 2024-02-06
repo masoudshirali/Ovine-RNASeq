@@ -227,7 +227,7 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 # External trait matching
 ####################################################################################
 
-# pull out all traits
+# pull out all continuous traits
   allTraits <- sample_metadata[,c(3:21)]
 # Define numbers of genes and samples
   nGenes = ncol(norm.counts)
@@ -236,6 +236,20 @@ allowWGCNAThreads()          # allow multi-threading (optional)
   module.trait.Pvalue = corPvalueStudent(module.trait.correlation, nSamples) #calculate the p-value associated with the correlation
   write.table(module.trait.correlation,file="7.wgcna/moduleTrait_correlation.txt");
   write.table(module.trait.Pvalue,file="7.wgcna/moduleTrait_pValue.txt");
+
+# For binary traits
+# binarize categorical variables and select the varable of interest (here CH4 yield)
+  allTraits <- sample_metadata %>% 
+  mutate(treatment_bin = ifelse(grepl('High', ID), 1, 0)) %>% 
+  select(4)
+sample_metadata$Treatment <- factor(sample_metadata$Treatment, levels = c("High", "Control"))
+treatment.out <- binarizeCategoricalColumns(sample_metadata$Treatment ,
+                           includePairwise = FALSE,
+                           includeLevelVsAll = TRUE,
+                           minCount = 1)
+
+
+allTraits <- cbind(allTraits, treatment.out)
 
 # create module-trait heatmap
 # Will display correlations and their p-values
