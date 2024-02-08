@@ -98,7 +98,7 @@ for(i in 1:length(results1)){
   resorder1 <- res1[order(res1$padj),]
   upDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange > 0))))
   downDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange < 0))))
-  resSig1 = subset(resorder1, padj < 0.1 & log2FoldChange > 1 | padj < 0.1 & log2FoldChange < 0)
+  resSig1 = subset(resorder1, padj < 0.1 & log2FoldChange > 0 | padj < 0.1 & log2FoldChange < 0)
   write.csv(resSig1 , file=paste0("6.deseq2/",results1[i],".0.1p.lfc0.updownDEGs.csv"), row.names = T)
   upresultstable1[results1[i],"upDEGs"] = upDEGs1
   downresultstable1[results1[i],"downDEGs"] = downDEGs1 
