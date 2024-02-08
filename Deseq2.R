@@ -77,10 +77,10 @@ for(i in 1:length(results)){
   res = results(deseq2Data, 
                 name = results[i])
   resorder <- res[order(res$padj),]
-  upDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange > 1))))
-  downDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange < -1))))
-  resSig = subset(resorder, padj < 0.1 & log2FoldChange > 1 | padj < 0.1 & log2FoldChange < -1)
-  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1p.lfc1.updownDEGs.csv"), row.names = T)
+  upDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange > 0.584))))
+  downDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange < -0.584))))
+  resSig = subset(resorder, padj < 0.1 & log2FoldChange > 0.584 | padj < 0.1 & log2FoldChange < -0.584)
+  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1p.lfc0.584.updownDEGs.csv"), row.names = T)
   upresultstable[results[i],"upDEGs"] = upDEGs
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
