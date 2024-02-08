@@ -1,6 +1,7 @@
 # Load libraries
 library(DESeq2)
 library(dplyr)
+library(pheatmap)
 
 #set the working directory
 setwd("/mnt/sda1/RNA/40-815970407/Sheep")
@@ -110,3 +111,21 @@ plotCounts(deseq2Data, gene="ATP6V0A4", intgroup="kmeansgroup", normalized=TRUE)
 dev.off()
 
 # For comparisons of gene counts between raw and normalized dataset
+
+#Heatmaps are a great way to look at gene counts. To do that, we can use a function in the pheatmap package.
+#Next, we can select a subset of genes to plot. Although we could plot all  genes, let’s choose the 20 genes with the largest positive log2fold change.
+
+genes <- order(res$log2FoldChange, decreasing=TRUE)[1:20]
+
+# make a data.frame that contains information about our samples that will appear in the heatmap
+# for this there should not be rownames
+metaData1 <- metaData # keeping a copy of original data
+rownames(metaData)<-NULL
+annot_col <- metaData %>%
+  column_to_rownames('ID') %>%
+  select(kmeansgroup) %>%
+  as.data.frame()
+
+pheatmap(assay(vsd)[genes, ], cluster_rows=TRUE, show_rownames=TRUE,
+         cluster_cols=FALSE, annotation_col=annot_col)
+
