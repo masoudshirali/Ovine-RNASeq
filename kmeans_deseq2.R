@@ -2,6 +2,8 @@
 library(DESeq2)
 library(dplyr)
 library(pheatmap)
+library(tidyverse)
+library(ggbeeswarm)
 
 #set the working directory
 setwd("/mnt/sda1/RNA/40-815970407/Sheep")
@@ -95,19 +97,31 @@ ggplot(df, aes(x=kmeansgroup, y=count, color=kmeansgroup)) +
 
 # Plot gene counts individually
 pdf("6.deseq2/FAM3Bgene.pdf")
-plotCounts(deseq2Data, gene="FAM3B", intgroup="kmeansgroup", normalized=TRUE)
+geneCounts <- plotCounts(deseq2Data, gene = "FAM3B", intgroup = c("kmeansgroup"),
+                         returnData = TRUE, normalized=TRUE)
+ggplot(geneCounts, aes(x = kmeansgroup, y = count, color = kmeansgroup)) +
+  scale_y_log10() +  geom_beeswarm(cex = 3)
 dev.off()
 
 pdf("6.deseq2/LOC114114465gene.pdf")
-plotCounts(deseq2Data, gene="LOC114114465", intgroup="kmeansgroup", normalized=TRUE)
+geneCounts <- plotCounts(deseq2Data, gene = "LOC114114465", intgroup = c("kmeansgroup"),
+                         returnData = TRUE, normalized=TRUE)
+ggplot(geneCounts, aes(x = kmeansgroup, y = count, color = kmeansgroup)) +
+  scale_y_log10() +  geom_beeswarm(cex = 3)
 dev.off()
 
 pdf("6.deseq2/NME4gene.pdf")
-plotCounts(deseq2Data, gene="NME4", intgroup="kmeansgroup", normalized=TRUE)
+geneCounts <- plotCounts(deseq2Data, gene = "NME4", intgroup = c("kmeansgroup"),
+                         returnData = TRUE, normalized=TRUE)
+ggplot(geneCounts, aes(x = kmeansgroup, y = count, color = kmeansgroup)) +
+  scale_y_log10() +  geom_beeswarm(cex = 3)
 dev.off()
 
 pdf("6.deseq2/ATP6V0A4gene.pdf")
-plotCounts(deseq2Data, gene="ATP6V0A4", intgroup="kmeansgroup", normalized=TRUE)
+geneCounts <- plotCounts(deseq2Data, gene = "ATP6V0A4", intgroup = c("kmeansgroup"),
+                         returnData = TRUE, normalized=TRUE)
+ggplot(geneCounts, aes(x = kmeansgroup, y = count, color = kmeansgroup)) +
+  scale_y_log10() +  geom_beeswarm(cex = 3)
 dev.off()
 
 # For comparisons of gene counts between raw and normalized dataset
