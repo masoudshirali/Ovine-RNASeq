@@ -4,6 +4,7 @@ library(dplyr)
 library(pheatmap)
 library(tidyverse)
 library(ggbeeswarm)
+library(genefilter)
 
 #set the working directory
 setwd("/mnt/sda1/RNA/40-815970407/Sheep")
@@ -75,7 +76,6 @@ for(i in 1:length(results)){
 }
 
 # Plot gene counts for the significant genes
-#vsd <- varianceStabilizingTransformation(deseq2Data)
 
 gene_set <- c("LOC114114465", "FAM3B", "NME4", "ATP6V0A4")
 names(gene_set) <- gene_set
@@ -129,17 +129,13 @@ dev.off()
 #Heatmaps are a great way to look at gene counts. To do that, we can use a function in the pheatmap package.
 #Next, we can select a subset of genes to plot. Although we could plot all  genes, let’s choose the 20 genes with the largest positive log2fold change.
 
-genes <- order(res$log2FoldChange, decreasing=TRUE)[1:20]
+vsd <- varianceStabilizingTransformation(deseq2Data)
 
-# make a data.frame that contains information about our samples that will appear in the heatmap
-# for this there should not be rownames
-metaData1 <- metaData # keeping a copy of original data
-rownames(metaData)<-NULL
-annot_col <- metaData %>%
-  column_to_rownames('ID') %>%
-  select(kmeansgroup) %>%
-  as.data.frame()
-
-pheatmap(assay(vsd)[genes, ], cluster_rows=TRUE, show_rownames=TRUE,
-         cluster_cols=FALSE, annotation_col=annot_col)
-
+pdf("6.deseq2/kmeans_pheatmap_top20genes_with_highest_variance.pdf")
+topVarGenes <- head(order(rowVars(assay(vsd)), decreasing = TRUE), 20)
+mat  <- assay(vsd)[ topVarGenes, ]
+mat  <- mat - rowMeans(mat)
+anno <- as.data.frame(colData(vsd)[, c("kmeansgroup")])
+rownames(anno)<-colnames(mat)
+pheatmap(mat, annotation_col = anno)
+dev.off()
