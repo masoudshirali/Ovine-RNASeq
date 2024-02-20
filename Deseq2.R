@@ -60,14 +60,18 @@ countData <- countData[,unique(rownames(metaData))]
 all(colnames(countData) == rownames(metaData))
 
 deseq2Data <- DESeqDataSetFromMatrix(countData=countData, colData=metaData, design= ~CH4production)
-deseq2Data <- deseq2Data[rowSums(assay(deseq2Data)) > 0, ]
-keep <- rowSums(counts(deseq2Data)) >= 4
-deseq2Data <- deseq2Data[keep,]
+
+# if you have many samples, consider doing this filtering step
+# smallestGroupSize = 22
+# keep <- rowSums(counts(deseq2Data) >= 10) >= smallestGroupSize
+# deseq2Data <- deseq2Data[keep,]
 
 deseq2Data <- DESeq(deseq2Data)
 
 #loop through results and extract significant DEGs for each model term
 
+pval = 0.05
+lfc = 0
 results = resultsNames(deseq2Data)
 upresultstable = matrix(nrow = length(results), ncol = 1, dimnames = list(results,"upDEGs"))
 downresultstable = matrix(nrow = length(results), ncol = 1, dimnames = list(results,"downDEGs"))
@@ -77,32 +81,14 @@ for(i in 1:length(results)){
   res = results(deseq2Data, 
                 name = results[i])
   resorder <- res[order(res$padj),]
-  upDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange > 0.584))))
-  downDEGs = (length(na.omit(which(res$padj<0.1 & res$log2FoldChange < -0.584))))
-  resSig = subset(resorder, padj < 0.1 & log2FoldChange > 0.584 | padj < 0.1 & log2FoldChange < -0.584)
-  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1p.lfc0.584.updownDEGs.csv"), row.names = T)
+  upDEGs = (length(na.omit(which(res$padj<pval & res$log2FoldChange > lfc))))
+  downDEGs = (length(na.omit(which(res$padj<pval & res$log2FoldChange < -lfc))))
+  resSig = subset(resorder, padj < pval & log2FoldChange > lfc | padj < pval & log2FoldChange < -lfc)
+  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.05P.0LFC.updownDEGs.csv"), row.names = T)
   upresultstable[results[i],"upDEGs"] = upDEGs
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
 
-# repeating the results extraction with different log2fc cutoff
-
-results1 = resultsNames(deseq2Data)
-upresultstable1 = matrix(nrow = length(results1), ncol = 1, dimnames = list(results1,"upDEGs"))
-downresultstable1 = matrix(nrow = length(results1), ncol = 1, dimnames = list(results1,"downDEGs"))
-
-for(i in 1:length(results1)){
-
-  res1 = results(deseq2Data, 
-                name = results1[i])
-  resorder1 <- res1[order(res1$padj),]
-  upDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange > 0))))
-  downDEGs1 = (length(na.omit(which(res1$padj<0.1 & res1$log2FoldChange < 0))))
-  resSig1 = subset(resorder1, padj < 0.1 & log2FoldChange > 0 | padj < 0.1 & log2FoldChange < 0)
-  write.csv(resSig1 , file=paste0("6.deseq2/",results1[i],".0.1p.lfc0.updownDEGs.csv"), row.names = T)
-  upresultstable1[results1[i],"upDEGs"] = upDEGs1
-  downresultstable1[results1[i],"downDEGs"] = downDEGs1 
-}
 
 # Extract the rawcounts for these significant genes (for WGCNA)
 #required_df <- countData[rownames(countData) %in% rownames(resSig1),]
