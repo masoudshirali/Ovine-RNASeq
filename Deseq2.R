@@ -62,7 +62,7 @@ all(colnames(countData) == rownames(metaData))
 deseq2Data <- DESeqDataSetFromMatrix(countData=countData, colData=metaData, design= ~CH4production)
 
 # if you have many samples, consider doing this filtering step
-# smallestGroupSize = 22
+# smallestGroupSize = 22 #total number of samples
 # keep <- rowSums(counts(deseq2Data) >= 10) >= smallestGroupSize
 # deseq2Data <- deseq2Data[keep,]
 
@@ -70,7 +70,7 @@ deseq2Data <- DESeq(deseq2Data)
 
 #loop through results and extract significant DEGs for each model term
 
-pval = 0.05
+pval = 0.1
 lfc = 0
 results = resultsNames(deseq2Data)
 upresultstable = matrix(nrow = length(results), ncol = 1, dimnames = list(results,"upDEGs"))
@@ -84,7 +84,7 @@ for(i in 1:length(results)){
   upDEGs = (length(na.omit(which(res$padj<pval & res$log2FoldChange > lfc))))
   downDEGs = (length(na.omit(which(res$padj<pval & res$log2FoldChange < -lfc))))
   resSig = subset(resorder, padj < pval & log2FoldChange > lfc | padj < pval & log2FoldChange < -lfc)
-  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.05P.0LFC.updownDEGs.csv"), row.names = T)
+  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.1P.0LFC.updownDEGs.csv"), row.names = T)
   upresultstable[results[i],"upDEGs"] = upDEGs
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
