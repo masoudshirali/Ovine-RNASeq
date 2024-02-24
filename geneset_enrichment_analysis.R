@@ -21,7 +21,7 @@ Oaries <- ah[["AH111978"]]
 # create geneList, which is a list of all genes from deseq2 with p<0.1
 # The variable res is the result from deseq2
 
-entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/entrezids_new",sep="\t")#35105
+entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/entrezids_GOids",sep="\t")#35105
 res_allgenes<-res
 res_allgenes$GeneName<-rownames(res)
 res_degs<-resSig
