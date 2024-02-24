@@ -23,7 +23,7 @@ rm extracted_entrezids_with_description
 rm extracted_entrezids
 
 # extract the gene ontology ids and gene ids from the .gaf file (downloaded from NCBI)
-awk -F '\t| |"' -v OFS="\t" '{print $2,$5}' $gffpath/GCF_016772045.2-RS_2023_10_gene_ontology.gaf > geneids_GOIds
+awk -F '\t| |"' -v OFS="\t" '{print $2,$5}' $gffpath/GCF_016772045.2-RS_2023_10_gene_ontology.gaf > $gffpath/entrezids_GOids
 
 # combine the GOids and description file
 # awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,h[$1]}' $gffpath/entrezids_with_description $gffpath/geneids_GOIds > $gffpath/entrezids_with_GOids_and_description
