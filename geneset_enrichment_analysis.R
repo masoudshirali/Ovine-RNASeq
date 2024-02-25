@@ -112,6 +112,11 @@ pdf("8.geneset.enrichments/emapplot_kegg.pdf", width=12)
 emapplot(pairwise_termsim(ans.kegg))
 dev.off()
 
+# In order to consider the potentially biological complexities in which a gene may belong to multiple annotation categories,  cnetplot function will extract the complex association between genes and pathways.
+pdf("8.geneset.enrichments/cnetplot_kegg.pdf", width=12)
+cnetplot(ans.kegg, categorySize="pvalue", foldChange=res_sigGenes)
+dev.off()
+
 #####################################################
 # PATHWAY ANALYSIS - RETRIEVING PATHWAY IMAGES
 #####################################################
