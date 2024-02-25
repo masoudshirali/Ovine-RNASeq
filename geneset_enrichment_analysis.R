@@ -46,16 +46,16 @@ rownames(res_allgenes) = stringr::str_remove(rownames(res_allgenes), "LOC")
 res_degs$GeneID <- stringr::str_remove(res_degs$GeneID, "LOC")
 rownames(res_degs) = stringr::str_remove(rownames(res_degs), "LOC")
 
-# res_allgenes_entrez<-merge(as.data.frame(res_allgenes), entrez, by="GeneID") # This significantly reduced the number of mapping gene IDS from gtf file, 35,117 genes were reduced to 16,120
-# res_degs_entrez<-merge(as.data.frame(res_degs), entrez, by="GeneSymbol") # same here
+###### res_allgenes_entrez<-merge(as.data.frame(res_allgenes), entrez, by="GeneID") # This significantly reduced the number of mapping gene IDS from gtf file, 35,117 genes were reduced to 16,120
+###### res_degs_entrez<-merge(as.data.frame(res_degs), entrez, by="GeneSymbol") # same here
 # Therefore trying another approach to retrieve the ENTREZ IDs
 
 # method 2 to retireve entrez ids
 # get entrezIds for the genes with symbols
-res_allgenesEntrez <- select(Oaries, keys =  res_allgenes$GeneID,
+res_allgenesEntrez <- AnnotationDbi::select(Oaries, keys =  res_allgenes$GeneID,
   columns = c('ENTREZID'), keytype = 'SYMBOL')
 
-res_sigGenesEntrez <- select(Oaries, keys = res_degs$GeneID,
+res_sigGenesEntrez <- AnnotationDbi::select(Oaries, keys = res_degs$GeneID,
   columns = c('ENTREZID'), keytype = 'SYMBOL')
 
 # Now replace the NA values in entrezid column with the values from first column. This is done because many values were not converted to ENTREZ IDs but already has it from GTF file. We will retain those.
@@ -66,6 +66,7 @@ res_allgenes_with_entrez = merge(as.data.frame(res_allgenes), res_allgenesEntrez
 res_sigGenesEntrez$ENTREZID <- ifelse(is.na(res_sigGenesEntrez$ENTREZID), res_sigGenesEntrez$SYMBOL, res_sigGenesEntrez$ENTREZID)
 colnames(res_sigGenesEntrez) = c("GeneID", "ENTREZID")
 res_degs_with_entrez = merge(as.data.frame(res_degs), res_sigGenesEntrez, by = "GeneID") #All entrezIDs have been retrieved for the DEGs (except for 2 genes)
+write.csv(res_degs_with_entrez,"6.deseq2/CH4production_DEGs_mapped_to_Entrezids.csv")
 
 #####################################################
 # GO AND KEGG ENRICHMENTS
@@ -100,12 +101,12 @@ write.csv(tab.kegg,"8.geneset.enrichments/KEGG_enrichments.csv")
 # VISUALIZATIONS OF GO AND KEGG ENRICHMENTS
 #####################################################
 
-pdf("8.geneset.enrichments/GO-Barplot.pdf")
-barplot(ans.go, showCategory=10)
+pdf("8.geneset.enrichments/GO-Barplot.pdf", height=14)
+barplot(ans.go, showCategory=20)
 dev.off()
 
 pdf("8.geneset.enrichments/upsetplot_kegg.pdf")
-upsetplot(ans.kegg)
+upsetplot(ans.kegg, showCategory=30)
 dev.off()
 
 pdf("8.geneset.enrichments/emapplot_kegg.pdf", width=12)
