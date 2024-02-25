@@ -18,6 +18,7 @@ library(enrichplot)
 ah <- AnnotationHub()
 AnnotationHub::query(ah, c("Ovis", "aries"))
 Oaries <- ah[["AH111978"]]
+columns(Oaries) # see available identifiers that can be used in this package
 
 # create geneList, which is a list of all genes from deseq2 with p<0.1
 # The variable res is the result from deseq2
@@ -27,356 +28,130 @@ entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb
 colnames(entrez) <- colnames(entrez)[2:ncol(entrez)]
 #drop last column
 entrez <- entrez[1:(ncol(entrez)-1)]
-
-entrez_GO<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/Full_entrezids_with_GOids",sep="\t")#35105
+# # Some of the GeneIDs and symbols contain "LOC" info, we need to remove it to merge it with the res and resSig files from deseq2.
+entrez$GeneID <- stringr::str_remove(entrez$GeneID, "LOC")
+entrez$GeneSymbol <- stringr::str_remove(entrez$GeneSymbol, "LOC")
 
 res_allgenes<-res
 res_allgenes$GeneID<-rownames(res)
 res_degs<-resSig
 res_degs$GeneID<-rownames(resSig)
+res_degs$GeneSymbol<-rownames(resSig)
 
-# Some of the GeneIDs contain "LOC" info, we need to remove it to merge it with the Full_entrezids_with_GOids original file.
+# removing "LOC" info
 res_allgenes$GeneID <- stringr::str_remove(res_allgenes$GeneID, "LOC")
 rownames(res_allgenes) = stringr::str_remove(rownames(res_allgenes), "LOC")
 res_degs$GeneID <- stringr::str_remove(res_degs$GeneID, "LOC")
 rownames(res_degs) = stringr::str_remove(rownames(res_degs), "LOC")
 
-res_allgenes_entrez<-merge(as.data.frame(res_allgenes), entrez, by="GeneID")
+# res_allgenes_entrez<-merge(as.data.frame(res_allgenes), entrez, by="GeneID") # This significantly reduced the number of mapping gene IDS from gtf file, 35,117 genes were reduced to 16,120
+# res_degs_entrez<-merge(as.data.frame(res_degs), entrez, by="GeneSymbol") # same here
+# Therefore trying another approach to retrieve the ENTREZ IDs
 
-# Merging the deg file with GO id file resulted in loosing many genes as it does not have GO IDs for all gene IDs. Hence this merging for this particular analysis will not work.
-# Follow the next step if your whole degs have GO id info
+# get entrezIds for the genes with symbols
+res_allgenesEntrez <- select(Oaries, keys =  res_allgenes$GeneID,
+  columns = c('ENTREZID'), keytype = 'SYMBOL')
 
-res_universe<-res_allgenes_entrez$GeneID
-res_sigGenes<-res_degs$GeneID
+res_sigGenesEntrez <- select(Oaries, keys = res_degs$GeneID,
+  columns = c('ENTREZID'), keytype = 'SYMBOL')
 
-# name the vector
-names(original_gene_list) <- merge_res_with_entrez$entrezgene
+# Now replace the NA values in entrezid column with the values from first column. This is done because many values were not converted to ENTREZ IDs but already has it from GTF file. We will retain those.
+res_allgenesEntrez$ENTREZID <- ifelse(is.na(res_allgenesEntrez$ENTREZID), res_allgenesEntrez$SYMBOL, res_allgenesEntrez$ENTREZID)
+colnames(res_allgenesEntrez) = c("GeneID", "ENTREZID")
+res_allgenes_with_entrez = merge(as.data.frame(res_allgenes), res_allgenesEntrez, by = "GeneID") #All entrezIDs have been retrieved for the DEGs (except for 2 genes)
 
+res_sigGenesEntrez$ENTREZID <- ifelse(is.na(res_sigGenesEntrez$ENTREZID), res_sigGenesEntrez$SYMBOL, res_sigGenesEntrez$ENTREZID)
+colnames(res_sigGenesEntrez) = c("GeneID", "ENTREZID")
+res_degs_with_entrez = merge(as.data.frame(res_degs), res_sigGenesEntrez, by = "GeneID") #All entrezIDs have been retrieved for the DEGs (except for 2 genes)
+
+# In order to asses functional enrichment, both DE gene list and gene universe must be annotated in Entrez IDs:
+
+res_universe<-res_allgenes_with_entrez$ENTREZID
 # omit any NA values 
-gene_list<-na.omit(original_gene_list)
-
+res_universe<-na.omit(res_universe)
 # sort the list in decreasing order (required for clusterProfiler)
-gene_list = sort(gene_list, decreasing = TRUE)
+res_universe = sort(res_universe, decreasing = TRUE)
+res_sigGenes<-res_degs_with_entrez$ENTREZID
+res_sigGenes = sort(res_sigGenes, decreasing = TRUE)
 
-# gene set enrichment
-gse <- gseGO(geneList=gene_list, 
-             ont ="ALL", 
-             minGSSize = 3, 
-             maxGSSize = 800, 
-             pvalueCutoff = 0.05, 
-             verbose = TRUE, 
-             OrgDb = Oaries, 
-             pAdjustMethod = "BH")
-write.csv(gse, file = paste0(prefix1, "-Gene-set-enrichment.csv"),row.names=F)
+ans.go <- enrichGO(gene = res_sigGenes, ont = "ALL",
+                   OrgDb =Oaries,
+                   universe = res_universe,
+                   readable=TRUE,
+                   pvalueCutoff = 0.1)
+tab.go <- as.data.frame(ans.go)
+write.csv(tab.go,"GO_enrichments.csv")
 
-# when no FDR correction perfrmed, some enriched terms are found. Even after specifying p of 0.1 no enriched terms
+ans.kegg <- enrichKEGG(gene = res_sigGenes,
+                       organism = 'oas',
+                       universe = res_universe,
+                       pvalueCutoff = 0.1)
+tab.kegg <- as.data.frame(ans.kegg)
+write.csv(tab.kegg,"KEGG_enrichments.csv")
 
-pdf(paste0(prefix1,"-Dotplot.pdf"), width=10, height=12)
-dotplot(gse, showCategory=10, split=".sign") + facet_grid(.~.sign)
+
+# Visualizations of the GO analysis
+
+prefix1 = "DGE_GO"
+
+pdf("GO-Barplot.pdf")
+barplot(ans.go, showCategory=10)
 dev.off()
 
-# enrichment map
-pdf(paste0(prefix1,"-Emapplot.pdf"), width=10, height=12)
-x2 <- pairwise_termsim(gse)
-emapplot(x2, showCategory = 10)
+pdf("upsetplot_kegg.pdf")
+upsetplot(ans.kegg)
 dev.off()
 
-#category net plot
-pdf(paste0(prefix1,"-Cnetplot.pdf"), width=10, height=12)
-cnetplot(gse, categorySize="pvalue", foldChange=gene_list, showCategory = 3)
-dev.off()
-
-# Ridgeplot
-pdf(paste0(prefix1,"-Ridgeplot.pdf"), width=10, height=12)
-ridgeplot(gse) + labs(x = "enrichment distribution")
-dev.off()
-
-
-# Use the `Gene Set` param for the index in the title, and as the value for geneSetId
-pdf(paste0(prefix1,"-GSEAplot.pdf"))
-gseaplot(gse, by = "all", title = gse$Description[1], geneSetID = 1)
-dev.off()
-
-# KEGG ENRICHMENT
-# Create a vector of the gene unuiverse
-kegg_gene_list <- merge_res_with_entrez$log2FoldChange
-
-# Name vector with ENTREZ ids
-names(kegg_gene_list) <- merge_res_with_entrez$entrezgene
-
-# omit any NA values 
-kegg_gene_list<-na.omit(kegg_gene_list)
-
-# sort the list in decreasing order (required for clusterProfiler)
-kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
-
-kegg_organism = "oas"
-kk2 <- gseKEGG(geneList     = kegg_gene_list,
-               organism     = kegg_organism,
-               minGSSize    = 3,
-               maxGSSize    = 800,
-               pvalueCutoff = 0.05,
-               pAdjustMethod = "BH")
-write.csv(kk2, file = paste0(prefix1, "-Kegg-enrichment.csv"),row.names=F)
-
-pdf(paste0(prefix1,"Kegg-Dotplot.pdf"), width=10, height=12)
-dotplot(kk2, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
-dev.off()
-
-pdf(paste0(prefix1,"Kegg-Emapplot.pdf"), width=10, height=12)
-x2 <- pairwise_termsim(kk2)
-emapplot(x2, showCategory = 10)
-dev.off()
-
-# categorySize can be either 'pvalue' or 'geneNum'
-pdf(paste0(prefix1,"Kegg-Cnetplot.pdf"), width=10, height=12)
-cnetplot(kk2, categorySize="pvalue", foldChange=gene_list)
-dev.off()
-
-# Use the `Gene Set` param for the index in the title, and as the value for geneSetId
-pdf(paste0(prefix1,"Kegg-Gseaplot.pdf"), width=10, height=12)
-gseaplot(kk2, by = "all", title = kk2$Description[1], geneSetID = 1)
+pdf("emapplot_kegg.pdf")
+emapplot(pairwise_termsim(ans.kegg))
 dev.off()
 
 
-# Produce the native KEGG plot (PNG)
-dme <- pathview(gene.data=kegg_gene_list, pathway.id="oas04610", species = kegg_organism)
-
-# Produce a different plot (PDF) (not displayed here)
-dme <- pathview(gene.data=kegg_gene_list, pathway.id="oas04610", species = kegg_organism, kegg.native = F)
-knitr::include_graphics("oas04610.pathview.png")
 
 
-# 2. Medium vs Control
-# we want the log2 fold change 
-prefix2="Medium_vs_Control"
-
-# create geneList, which is a list of all genes from deseq2 with p<0.1
-entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/entrezids_new",sep="\t")#35105
-MC_res_GO <- MC_resSig#24119
-MC_res_GO <- MC_res_GO[!is.na(MC_res_GO$padj),]
-MC_res_GO<-MC_res_GO[order(MC_res_GO$padj),]
-#convert rownames to a column  and name it as GeneName so as to merge it with entrez
-MC_res_GO$GeneName <- rownames(MC_res_GO)
-merge_res_with_entrez<-merge(as.data.frame(MC_res_GO), entrez, by="GeneName")
-# again change GeneName to Locus so as to merge with geneTable. Then remove all occurences of "LOC" from GeneName column
-colnames(merge_res_with_entrez)[colnames(merge_res_with_entrez) == 'GeneID'] <- 'entrezgene'
-merge_res_with_entrez$GeneName <- gsub("LOC", "", merge_res_with_entrez$GeneName)
-
-rownames(merge_res_with_entrez) <- merge_res_with_entrez$entrezgene
-original_gene_list <- merge_res_with_entrez$log2FoldChange
-
-# name the vector
-names(original_gene_list) <- merge_res_with_entrez$entrezgene
-
-# omit any NA values 
-gene_list<-na.omit(original_gene_list)
-
-# sort the list in decreasing order (required for clusterProfiler)
-gene_list = sort(gene_list, decreasing = TRUE)
-
-# gene set enrichment
-gse <- gseGO(geneList=gene_list, 
-             ont ="ALL", 
-             minGSSize = 3, 
-             maxGSSize = 800, 
-             pvalueCutoff = 0.05, 
-             verbose = TRUE, 
-             OrgDb = Oaries, 
-             pAdjustMethod = "BH")
-write.csv(gse, file = paste0(prefix2, "-Gene-set-enrichment.csv"),row.names=F)
-
-# when no FDR correction perfrmed, some enriched terms are found. Even after specifying p of 0.1 no enriched terms
-
-pdf(paste0(prefix2,"-Dotplot.pdf"), width=10, height=12)
-dotplot(gse, showCategory=10, split=".sign") + facet_grid(.~.sign)
-dev.off()
-
-# enrichment map
-pdf(paste0(prefix2,"-Emapplot.pdf"), width=10, height=12)
-x2 <- pairwise_termsim(gse)
-emapplot(x2, showCategory = 10)
-dev.off()
-
-#category net plot
-pdf(paste0(prefix2,"-Cnetplot.pdf"), width=10, height=12)
-cnetplot(gse, categorySize="pvalue", foldChange=gene_list, showCategory = 3)
-dev.off()
-
-# Ridgeplot
-pdf(paste0(prefix2,"-Ridgeplot.pdf"), width=10, height=12)
-ridgeplot(gse) + labs(x = "enrichment distribution")
-dev.off()
 
 
-# Use the `Gene Set` param for the index in the title, and as the value for geneSetId
-pdf(paste0(prefix2,"-GSEAplot.pdf"))
-gseaplot(gse, by = "all", title = gse$Description[1], geneSetID = 1)
-dev.off()
-
-# KEGG ENRICHMENT
-# Create a vector of the gene unuiverse
-kegg_gene_list <- merge_res_with_entrez$log2FoldChange
-
-# Name vector with ENTREZ ids
-names(kegg_gene_list) <- merge_res_with_entrez$entrezgene
-
-# omit any NA values 
-kegg_gene_list<-na.omit(kegg_gene_list)
-
-# sort the list in decreasing order (required for clusterProfiler)
-kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
-
-kegg_organism = "oas"
-kk2 <- gseKEGG(geneList     = kegg_gene_list,
-               organism     = kegg_organism,
-               minGSSize    = 3,
-               maxGSSize    = 800,
-               pvalueCutoff = 0.05,
-               pAdjustMethod = "BH")
-write.csv(kk2, file = paste0(prefix2, "-Kegg-enrichment.csv"),row.names=F)
-
-pdf(paste0(prefix2,"Kegg-Dotplot.pdf"), width=10, height=12)
-dotplot(kk2, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
-dev.off()
-
-pdf(paste0(prefix2,"Kegg-Emapplot.pdf"), width=10, height=12)
-x2 <- pairwise_termsim(kk2)
-emapplot(x2, showCategory = 10)
-dev.off()
-
-# categorySize can be either 'pvalue' or 'geneNum'
-pdf(paste0(prefix2,"Kegg-Cnetplot.pdf"), width=10, height=12)
-cnetplot(kk2, categorySize="pvalue", foldChange=gene_list)
-dev.off()
-
-# Use the `Gene Set` param for the index in the title, and as the value for geneSetId
-pdf(paste0(prefix2,"Kegg-Gseaplot.pdf"), width=10, height=12)
-gseaplot(kk2, by = "all", title = kk2$Description[1], geneSetID = 1)
-dev.off()
 
 
-# Produce the native KEGG plot (PNG)
-dme <- pathview(gene.data=kegg_gene_list, pathway.id="oas04060", species = kegg_organism)
-
-# Produce a different plot (PDF) (not displayed here)
-dme <- pathview(gene.data=kegg_gene_list, pathway.id="oas04060", species = kegg_organism, kegg.native = F)
-knitr::include_graphics("oas04060.pathview.png")
-
-# 3. High vs Control
-
-# we want the log2 fold change 
-prefix3="High_vs_Control"
-
-# create geneList, which is a list of all genes from deseq2 with p<0.1
-entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/entrezids_new",sep="\t")#35105
-HC_res_GO <- HC_res#24119
-HC_res_GO <- HC_res_GO[!is.na(HC_res_GO$padj),]
-HC_res_GO<-HC_res_GO[order(HC_res_GO$padj),]
-#convert rownames to a column  and name it as GeneName so as to merge it with entrez
-HC_res_GO$GeneName <- rownames(HC_res_GO)
-merge_res_with_entrez<-merge(as.data.frame(HC_res_GO), entrez, by="GeneName")
-# again change GeneName to Locus so as to merge with geneTable. Then remove all occurences of "LOC" from GeneName column
-colnames(merge_res_with_entrez)[colnames(merge_res_with_entrez) == 'GeneID'] <- 'entrezgene'
-merge_res_with_entrez$GeneName <- gsub("LOC", "", merge_res_with_entrez$GeneName)
-
-rownames(merge_res_with_entrez) <- merge_res_with_entrez$entrezgene
-original_gene_list <- merge_res_with_entrez$log2FoldChange
-
-# name the vector
-names(original_gene_list) <- merge_res_with_entrez$entrezgene
-
-# omit any NA values 
-gene_list<-na.omit(original_gene_list)
-
-# sort the list in decreasing order (required for clusterProfiler)
-gene_list = sort(gene_list, decreasing = TRUE)
-
-# gene set enrichment
-gse <- gseGO(geneList=gene_list, 
-             ont ="ALL", 
-             minGSSize = 3, 
-             maxGSSize = 800, 
-             pvalueCutoff = 0.05, 
-             verbose = TRUE, 
-             OrgDb = Oaries, 
-             pAdjustMethod = "BH")
-write.csv(gse, file = paste0(prefix3, "-Gene-set-enrichment.csv"),row.names=F)
-
-# when no FDR correction perfrmed, some enriched terms are found. Even after specifying p of 0.1 no enriched terms
-
-pdf(paste0(prefix3,"-Dotplot.pdf"), width=10, height=12)
-dotplot(gse, showCategory=10, split=".sign") + facet_grid(.~.sign)
-dev.off()
-
-# enrichment map
-pdf(paste0(prefix3,"-Emapplot.pdf"), width=10, height=12)
-x2 <- pairwise_termsim(gse)
-emapplot(x2, showCategory = 10)
-dev.off()
-
-#category net plot
-pdf(paste0(prefix3,"-Cnetplot.pdf"), width=10, height=12)
-cnetplot(gse, categorySize="pvalue", foldChange=gene_list, showCategory = 3)
-dev.off()
-
-# Ridgeplot
-pdf(paste0(prefix3,"-Ridgeplot.pdf"), width=10, height=12)
-ridgeplot(gse) + labs(x = "enrichment distribution")
-dev.off()
 
 
-# Use the `Gene Set` param for the index in the title, and as the value for geneSetId
-pdf(paste0(prefix3,"-GSEAplot.pdf"))
-gseaplot(gse, by = "all", title = gse$Description[1], geneSetID = 1)
-dev.off()
-
-# KEGG ENRICHMENT
-# Create a vector of the gene unuiverse
-kegg_gene_list <- merge_res_with_entrez$log2FoldChange
-
-# Name vector with ENTREZ ids
-names(kegg_gene_list) <- merge_res_with_entrez$entrezgene
-
-# omit any NA values 
-kegg_gene_list<-na.omit(kegg_gene_list)
-
-# sort the list in decreasing order (required for clusterProfiler)
-kegg_gene_list = sort(kegg_gene_list, decreasing = TRUE)
-
-kegg_organism = "oas"
-kk2 <- gseKEGG(geneList     = kegg_gene_list,
-               organism     = kegg_organism,
-               minGSSize    = 3,
-               maxGSSize    = 800,
-               pvalueCutoff = 0.05,
-               pAdjustMethod = "BH")
-write.csv(kk2, file = paste0(prefix3, "-Kegg-enrichment.csv"),row.names=F)
-
-pdf(paste0(prefix3,"Kegg-Dotplot.pdf"), width=10, height=12)
-dotplot(kk2, showCategory = 10, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
-dev.off()
-
-pdf(paste0(prefix3,"Kegg-Emapplot.pdf"), width=10, height=12)
-x2 <- pairwise_termsim(kk2)
-emapplot(x2, showCategory = 10)
-dev.off()
-
-# categorySize can be either 'pvalue' or 'geneNum'
-pdf(paste0(prefix3,"Kegg-Cnetplot.pdf"), width=10, height=12)
-cnetplot(kk2, categorySize="pvalue", foldChange=gene_list)
-dev.off()
-
-# Use the `Gene Set` param for the index in the title, and as the value for geneSetId
-pdf(paste0(prefix3,"Kegg-Gseaplot.pdf"), width=10, height=12)
-gseaplot(kk2, by = "all", title = kk2$Description[1], geneSetID = 1)
-dev.off()
 
 
-# Produce the native KEGG plot (PNG)
-dme <- pathview(gene.data=kegg_gene_list, pathway.id="oas04613", species = kegg_organism)
 
-# Produce a different plot (PDF) (not displayed here)
-dme <- pathview(gene.data=kegg_gene_list, pathway.id="oas04613", species = kegg_organism, kegg.native = F)
-knitr::include_graphics("oas04613.pathview.png")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# GO classification
+# the groupGO() function is designed for gene classification based on GO distribution at a specific level.
+ggo <- groupGO(gene     = res_sigGenes,
+               OrgDb    = Oaries,
+               ont      = "CC",
+               level    = 3,
+               readable = TRUE)
+
+head(ggo)
+
+# GO over-representation analysis
+ego <- enrichGO(gene          = res_sigGenes,
+                universe      = names(res_universe),
+                OrgDb         = Oaries,
+                ont           = "ALL",
+                pAdjustMethod = "fdr",
+                pvalueCutoff  = 0.09,
+                qvalueCutoff  = 0.09,
+        readable      = TRUE)
+head(ego)
