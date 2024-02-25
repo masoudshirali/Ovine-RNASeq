@@ -17,7 +17,7 @@ library(tidyverse)
 setwd("/mnt/sda1/RNA/40-815970407/Sheep")
 
 # create a directory to store DESeq2 outputs
-system("mkdir 6.deseq2")
+#system("mkdir 6.deseq2")
 
 # Read the raw count data generated from featureCounts
 countData<-read.csv("5.featurecounts/Lambs.featurecounts.hisat2.Rmatrix",sep="\t", header=T, check.names=F)
@@ -88,6 +88,11 @@ for(i in 1:length(results)){
   upresultstable[results[i],"upDEGs"] = upDEGs
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
+
+# fold change = 0.5, Log2FC= -1
+# fc = 1.4, log2fc = 0.5 (1.5 times higher expression)
+# log2fc =0 means no change
+
 
 
 # Extract the rawcounts for these significant genes (for WGCNA)
