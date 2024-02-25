@@ -1,8 +1,3 @@
-# Import the annotation file for the ovis aries genome
-
-gffpath="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0"
-gfffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/genomic.gff"
-
 # Load the necessary libraries
 
 library(stringr)
@@ -20,11 +15,16 @@ AnnotationHub::query(ah, c("Ovis", "aries"))
 Oaries <- ah[["AH111978"]]
 columns(Oaries) # see available identifiers that can be used in this package
 
-# create geneList, which is a list of all genes from deseq2 with p<0.1
-# The variable res is the result from deseq2
+# create geneList, which is a list of all genes from deseq2 with p<0.1 and lfc =0
+# The variable res is the result from deseq2 and resSig contains all the DEGs
 
+# The deseq2 results contains a mix of gene symbols and gene IDs (entrez IDs). For the enrichment analysis, it is advisable to use ensembl IDs or ENTREZ Ids. Here, we will be using Entrez IDs.
+# So, the genes with gene symbols need to be converted to their entrezids. The entrez ids were retrieved from the gtf file which can be used to get entrez ids for our significant gene list. This is one way
+# There is another way to retrieve the entrez ids using a function in the clusterProfiler package.
+
+# 1. method 1 to retrieve entrez ids
 entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/EntrezIDsfromGtf",sep="\t", header=TRUE,row.names=NULL)#35105
-#modify column names
+# modify column names
 colnames(entrez) <- colnames(entrez)[2:ncol(entrez)]
 #drop last column
 entrez <- entrez[1:(ncol(entrez)-1)]
@@ -48,6 +48,7 @@ rownames(res_degs) = stringr::str_remove(rownames(res_degs), "LOC")
 # res_degs_entrez<-merge(as.data.frame(res_degs), entrez, by="GeneSymbol") # same here
 # Therefore trying another approach to retrieve the ENTREZ IDs
 
+# method 2 to retireve entrez ids
 # get entrezIds for the genes with symbols
 res_allgenesEntrez <- select(Oaries, keys =  res_allgenes$GeneID,
   columns = c('ENTREZID'), keytype = 'SYMBOL')
@@ -63,6 +64,10 @@ res_allgenes_with_entrez = merge(as.data.frame(res_allgenes), res_allgenesEntrez
 res_sigGenesEntrez$ENTREZID <- ifelse(is.na(res_sigGenesEntrez$ENTREZID), res_sigGenesEntrez$SYMBOL, res_sigGenesEntrez$ENTREZID)
 colnames(res_sigGenesEntrez) = c("GeneID", "ENTREZID")
 res_degs_with_entrez = merge(as.data.frame(res_degs), res_sigGenesEntrez, by = "GeneID") #All entrezIDs have been retrieved for the DEGs (except for 2 genes)
+
+#####################################################
+# GO AND KEGG ENRICHMENTS
+#####################################################
 
 # In order to asses functional enrichment, both DE gene list and gene universe must be annotated in Entrez IDs:
 
@@ -89,11 +94,11 @@ ans.kegg <- enrichKEGG(gene = res_sigGenes,
 tab.kegg <- as.data.frame(ans.kegg)
 write.csv(tab.kegg,"KEGG_enrichments.csv")
 
-
-# Visualizations of the GO analysis
+#####################################################
+# VISUALIZATIONS OF GO AND KEGG ENRICHMENTS
+#####################################################
 
 prefix1 = "DGE_GO"
-
 pdf("GO-Barplot.pdf")
 barplot(ans.go, showCategory=10)
 dev.off()
@@ -106,52 +111,43 @@ pdf("emapplot_kegg.pdf")
 emapplot(pairwise_termsim(ans.kegg))
 dev.off()
 
+#####################################################
+# PATHWAY ANALYSIS - RETRIEVING PATHWAY IMAGES
+#####################################################
 
+#preparing tables for pathway analysis
+de=data.frame(res_degs_with_entrez$ENTREZID,res_degs_with_entrez$log2FoldChange)
+dl=data.frame(res_degs_with_entrez$GeneID,res_degs_with_entrez$log2FoldChange)
+head(de)
+head(dl)
 
+geneList = de[,2]
+names(geneList) = as.character(de[,1])
+geneList = sort(geneList, decreasing = TRUE)
+head(geneList)#geneList has entrezids and FC values
+gene <- names(geneList)
 
+# Retrieveing the pathway images
+pathwayids=ans.kegg$ID   #make a vector of Pathway ids
+keggspecies="oas"
 
+x <- pathview(gene.data  = geneList,
+              pathway.id = pathwayids,
+              species    = keggspecies,
+              gene.idtype = "KEGG",
+              limit      = list(gene=max(abs(geneList)), cpd=1))
 
+# Another method if kegg org annotations not working or kegg species invalid error occurs
+# preparing korg for oas as the above code does not give full info of pathways (https://support.bioconductor.org/p/9146074/)
+data(korg, package="pathview")
+head(korg)
+korg[korg[,3]=="oas",]
+# Next create your own, single line, korg object.
+korg <- cbind("ktax.id" = "T03117", "tax.id" = "9940", "kegg.code" = "oas",
+               "scientific.name" = "Ovis aries", "common.name" = "sheep",
+               "entrez.gnodes" = "1", "kegg.geneid" = "101112667", "ncbi.geneid" = "101112667",
+               "ncbi.proteinid" = "XP_027833621", "uniprot" = "A0A6P7ER41")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# GO classification
-# the groupGO() function is designed for gene classification based on GO distribution at a specific level.
-ggo <- groupGO(gene     = res_sigGenes,
-               OrgDb    = Oaries,
-               ont      = "CC",
-               level    = 3,
-               readable = TRUE)
-
-head(ggo)
-
-# GO over-representation analysis
-ego <- enrichGO(gene          = res_sigGenes,
-                universe      = names(res_universe),
-                OrgDb         = Oaries,
-                ont           = "ALL",
-                pAdjustMethod = "fdr",
-                pvalueCutoff  = 0.09,
-                qvalueCutoff  = 0.09,
-        readable      = TRUE)
-head(ego)
+pv.out <- pathview(gene.data =geneList, pathway.id = pathwayids,
+                    species = "oas", out.suffix = "oas",
+                    kegg.native = TRUE)
