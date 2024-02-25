@@ -5,6 +5,7 @@ gfffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/gen
 
 # Load the necessary libraries
 
+library(stringr)
 library(clusterProfiler)
 library(pathview)
 library(stringr)
@@ -21,16 +22,32 @@ Oaries <- ah[["AH111978"]]
 # create geneList, which is a list of all genes from deseq2 with p<0.1
 # The variable res is the result from deseq2
 
-entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/entrezids_GOids",sep="\t")#35105
+entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/EntrezIDsfromGtf",sep="\t", header=TRUE,row.names=NULL)#35105
+#modify column names
+colnames(entrez) <- colnames(entrez)[2:ncol(entrez)]
+#drop last column
+entrez <- entrez[1:(ncol(entrez)-1)]
+
+entrez_GO<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/Full_entrezids_with_GOids",sep="\t")#35105
+
 res_allgenes<-res
-res_allgenes$GeneName<-rownames(res)
+res_allgenes$GeneID<-rownames(res)
 res_degs<-resSig
-res_degs$GeneName<-rownames(resSig)
-entrez<-read.csv("/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/entrezids_new",sep="\t")#35105
-res_allgenes_entrez<-merge(as.data.frame(res_allgenes), entrez, by="GeneName")
-res_degs_entrez<-merge(as.data.frame(res_degs), entrez, by="GeneName")
+res_degs$GeneID<-rownames(resSig)
+
+# Some of the GeneIDs contain "LOC" info, we need to remove it to merge it with the Full_entrezids_with_GOids original file.
+res_allgenes$GeneID <- stringr::str_remove(res_allgenes$GeneID, "LOC")
+rownames(res_allgenes) = stringr::str_remove(rownames(res_allgenes), "LOC")
+res_degs$GeneID <- stringr::str_remove(res_degs$GeneID, "LOC")
+rownames(res_degs) = stringr::str_remove(rownames(res_degs), "LOC")
+
+res_allgenes_entrez<-merge(as.data.frame(res_allgenes), entrez, by="GeneID")
+
+# Merging the deg file with GO id file resulted in loosing many genes as it does not have GO IDs for all gene IDs. Hence this merging for this particular analysis will not work.
+# Follow the next step if your whole degs have GO id info
+
 res_universe<-res_allgenes_entrez$GeneID
-res_sigGenes<-res_degs_entrez$GeneID
+res_sigGenes<-res_degs$GeneID
 
 # name the vector
 names(original_gene_list) <- merge_res_with_entrez$entrezgene
