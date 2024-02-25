@@ -1,3 +1,5 @@
+# https://rpubs.com/jrgonzalezISGlobal/enrichment
+
 # Load the necessary libraries
 
 library(stringr)
@@ -85,29 +87,28 @@ ans.go <- enrichGO(gene = res_sigGenes, ont = "ALL",
                    readable=TRUE,
                    pvalueCutoff = 0.1)
 tab.go <- as.data.frame(ans.go)
-write.csv(tab.go,"GO_enrichments.csv")
+write.csv(tab.go,"8.geneset.enrichments/GO_enrichments.csv")
 
 ans.kegg <- enrichKEGG(gene = res_sigGenes,
                        organism = 'oas',
                        universe = res_universe,
                        pvalueCutoff = 0.1)
 tab.kegg <- as.data.frame(ans.kegg)
-write.csv(tab.kegg,"KEGG_enrichments.csv")
+write.csv(tab.kegg,"8.geneset.enrichments/KEGG_enrichments.csv")
 
 #####################################################
 # VISUALIZATIONS OF GO AND KEGG ENRICHMENTS
 #####################################################
 
-prefix1 = "DGE_GO"
-pdf("GO-Barplot.pdf")
+pdf("8.geneset.enrichments/GO-Barplot.pdf")
 barplot(ans.go, showCategory=10)
 dev.off()
 
-pdf("upsetplot_kegg.pdf")
+pdf("8.geneset.enrichments/upsetplot_kegg.pdf")
 upsetplot(ans.kegg)
 dev.off()
 
-pdf("emapplot_kegg.pdf")
+pdf("8.geneset.enrichments/emapplot_kegg.pdf", width=12)
 emapplot(pairwise_termsim(ans.kegg))
 dev.off()
 
