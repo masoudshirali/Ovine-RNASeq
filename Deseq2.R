@@ -89,7 +89,7 @@ for(i in 1:length(results)){
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
 
-# fold change = 0.5, Log2FC= -1
+# fold change = 0.5, Log2FC= -1 (2 fold decrease)
 # fc = 1.4, log2fc = 0.5 (1.5 times higher expression)
 # log2fc =0 means no change
 
