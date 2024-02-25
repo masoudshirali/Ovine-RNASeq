@@ -1,7 +1,16 @@
-# extract the entrez ids from the gtf file (downloaded from NCBI)
+# extract the entrez ids from the gtf and gff files (downloaded from NCBI)
 gffpath="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0"
 gfffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/genomic.gff"
+gtffile="/mnt/sda1/RNA/40-815970407/Sheep/Reference_geneome/ARS-UI_Ramb_v3.0/genomic.gtf"
 
+# From the GTF file
+cat $gtffile | awk 'BEGIN{FS="\t"}{split($9,a,";"); if($3~"gene") print a[1]"\t"a[3]"\t"}' \
+| sed 's/gene_id "//' | sed 's/gene_name "//' | sed 's/"//g' | sed 's/ //g' > $gffpath/GeneIDsfromGTF
+
+sed 's/[db_xrefGeneID:,]//g' $gffpath/GeneIDsfromGTF > $gffpath/EntrezIDsfromGtf
+sed -i '1i GeneSymbol\tGeneID' $gffpath/EntrezIDsfromGtf
+
+# From the GFF file
 zgrep 'GeneID' $gfffile \
   | cut -f9 | perl -pe 's/ID.*(GeneID:\d+).*gene=([^;]*).*/\1\t\2/g' \
   | sort -u > $gffpath/extracted_entrezids
