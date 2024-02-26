@@ -69,6 +69,8 @@ deseq2Data <- deseq2Data[keep,]
 deseq2Data <- DESeq(deseq2Data)
 
 #loop through results and extract significant DEGs for each model term
+# speify the cut-offs for pval and lfc in the below variables.
+# make sure to change the filenames with the cutoff values before saving the deg file (Line 89)
 
 pval = 0.05
 lfc = 0.584
