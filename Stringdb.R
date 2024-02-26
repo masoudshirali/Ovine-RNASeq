@@ -3,13 +3,17 @@
 # Load the libraries
  library(STRINGdb)
 
+
+system("mkdir 9.NetworkAnalysis")
+
 # load string database
 #9940 for sheep
 string_db <- STRINGdb$new(version = "11.5", species = 9940,score_threshold=400, protocol="https")
 class(string_db)
 
 # map the gene names to the STRING database identifiers using the map method. The map function adds an additional column with STRING identifiers to the dataframe that is passed as first parameter.
-data<-read.csv("6.deseq2/CH4yield.0.1p.lfc0.updownDEGs.Control.vs.High.csv",sep=",",row.names=1)
+data<-read.csv("6.deseq2/CH4production_DEGs_mapped_to_Entrezids.csv",sep=",",row.names=NULL)
+rownames(data)<-data$ENTREZID
 data$gene<-rownames(data)
 data_mapped <- string_db$map(data, "gene", removeUnmappedRows = TRUE )
 dim(data_mapped)
@@ -29,7 +33,7 @@ payload_id <- string_db$post_payload( data_mapped_sig$STRING_id,
                                       colors=data_mapped_sig$color )
 
 # display a STRING network png with the "halo"
-pdf("String_network.pdf")
+pdf("9.NetworkAnalysis/String_network.pdf")
 string_db$plot_network(hits, payload_id=payload_id)
 dev.off()
 
