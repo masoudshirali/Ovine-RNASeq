@@ -63,7 +63,7 @@ deseq2Data <- DESeqDataSetFromMatrix(countData=countData, colData=metaData, desi
 
 # Stringent approach where we keep only rows that have at least 10 reads total
 keep <- rowSums(counts(deseq2Data)) >= 10
-deseq2Data <- deseq2Data[keep,]
+deseq2Data <- deseq2Data[keep,] #22,750 remaining
 
 deseq2Data <- DESeq(deseq2Data)
 
@@ -72,8 +72,8 @@ deseq2Data <- DESeq(deseq2Data)
 # speify the cut-offs for pval and lfc in the below variables.
 # make sure to change the filenames with the cutoff values before saving the deg file (Line 89)
 
-pval = 0.05
-lfc = 0.584
+pval = 0.1
+lfc = 0
 results = resultsNames(deseq2Data)
 upresultstable = matrix(nrow = length(results), ncol = 1, dimnames = list(results,"upDEGs"))
 downresultstable = matrix(nrow = length(results), ncol = 1, dimnames = list(results,"downDEGs"))
@@ -86,7 +86,7 @@ for(i in 1:length(results)){
   upDEGs = (length(na.omit(which(res$padj<pval & res$log2FoldChange > lfc))))
   downDEGs = (length(na.omit(which(res$padj<pval & res$log2FoldChange < -lfc))))
   resSig = subset(resorder, padj < pval & log2FoldChange > lfc | padj < pval & log2FoldChange < -lfc)
-  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.05P.0.584LFC.updownDEGs.csv"), row.names = T)
+  write.csv(resSig , file=paste0("6.deseq2/",results[i],".0.05P.0.584LFC.updownDEGs_RELAXED.csv"), row.names = T)
   upresultstable[results[i],"upDEGs"] = upDEGs
   downresultstable[results[i],"downDEGs"] = downDEGs 
 }
