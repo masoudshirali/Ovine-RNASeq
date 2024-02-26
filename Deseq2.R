@@ -61,9 +61,8 @@ all(colnames(countData) == rownames(metaData))
 
 deseq2Data <- DESeqDataSetFromMatrix(countData=countData, colData=metaData, design= ~CH4production)
 
-# if you have many samples, consider doing this filtering step
-smallestGroupSize = 22 #total number of samples
-keep <- rowSums(counts(deseq2Data) >= 10) >= smallestGroupSize
+# Stringent approach where we keep only rows that have at least 10 reads total
+keep <- rowSums(counts(deseq2Data)) >= 10
 deseq2Data <- deseq2Data[keep,]
 
 deseq2Data <- DESeq(deseq2Data)
