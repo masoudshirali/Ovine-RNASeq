@@ -7,7 +7,7 @@ Make sure you have installed the necessary softwares required to run the pipelin
 1. FastQC
 2. Trimmomatic
 3. Hisat2
-4. featureCounts
+4. Subread - featureCounts
 
 After you have installed the necessary software, please proceed to running the actual pipeline. We would run them in the following order:
 1. bash RNASeqPipeline.sh or /.RNASeqPipeline.sh
